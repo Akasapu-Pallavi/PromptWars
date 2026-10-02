@@ -25,6 +25,9 @@ globalRoot.AppState = AppState;
 
 // DOM Elements Cache
 let DOM = {};
+let queueAnnouncementTimer = null;
+let lastQueueAnnouncementKey = null;
+let impactAnnouncementTimer = null;
 
 function createEl(tag, props, ...children) {
   const node = document.createElement(tag);
@@ -141,12 +144,14 @@ function initApp() {
     
     // Queue Controls
     queueTableBody: document.getElementById('queue-table-body'),
+    queueResultsStatus: document.getElementById('queue-results-status'),
     searchInput: document.getElementById('search-input'),
     riskFilterBtns: document.querySelectorAll('.btn-filter[data-risk]'),
     statusFilterBtns: document.querySelectorAll('.btn-filter[data-status]'),
     
     // Workbench Details
     wbOrderId: document.getElementById('wb-order-id'),
+    workbenchHeading: document.getElementById('heading-order-workbench'),
     wbCustomerName: document.getElementById('wb-customer-name'),
     wbCustomerPhone: document.getElementById('wb-customer-phone'),
     wbCustomerLtv: document.getElementById('wb-customer-ltv'),
@@ -170,10 +175,12 @@ function initApp() {
     calcRescuedOrders: document.getElementById('calc-rescued-orders'),
     calcMonthlyRevenue: document.getElementById('calc-monthly-revenue'),
     calcAnnualRevenue: document.getElementById('calc-annual-revenue'),
+    impactAnnouncement: document.getElementById('impact-announcement'),
 
     // Audit Feed
     auditFeedList: document.getElementById('audit-feed-list'),
-    toastContainer: document.getElementById('toast-container')
+    toastContainer: document.getElementById('toast-container'),
+    appAnnouncement: document.getElementById('app-announcement')
   };
 
   setupTabListeners();
@@ -185,25 +192,41 @@ function initApp() {
 // Setup Tab Navigation
 function setupTabListeners() {
   DOM.tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetTab = btn.getAttribute('data-tab');
-      
-      DOM.tabBtns.forEach(b => {
-        const isActive = b === btn;
-        b.classList.toggle('active', isActive);
-        b.setAttribute('aria-current', isActive ? 'page' : 'false');
-      });
-      DOM.tabContents.forEach(c => {
-        const isActive = c.id === `tab-${targetTab}`;
-        c.classList.toggle('active', isActive);
-        if (isActive) {
-          c.removeAttribute('hidden');
-        } else {
-          c.setAttribute('hidden', '');
-        }
-      });
+    btn.addEventListener('click', () => activateTab(btn));
+    btn.addEventListener('keydown', (event) => {
+      const currentIndex = Array.from(DOM.tabBtns).indexOf(btn);
+      let nextIndex = currentIndex;
+
+      if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % DOM.tabBtns.length;
+      else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + DOM.tabBtns.length) % DOM.tabBtns.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = DOM.tabBtns.length - 1;
+      else return;
+
+      event.preventDefault();
+      activateTab(DOM.tabBtns[nextIndex], true);
     });
   });
+}
+
+function activateTab(selectedTab, moveFocus = false) {
+  const panelId = selectedTab.getAttribute('aria-controls');
+
+  DOM.tabBtns.forEach(btn => {
+    const isActive = btn === selectedTab;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    btn.setAttribute('tabindex', isActive ? '0' : '-1');
+  });
+
+  DOM.tabContents.forEach(panel => {
+    const isActive = panel.id === panelId;
+    panel.classList.toggle('active', isActive);
+    if (isActive) panel.removeAttribute('hidden');
+    else panel.setAttribute('hidden', '');
+  });
+
+  if (moveFocus) selectedTab.focus();
 }
 
 // Setup Queue Search & Filters
@@ -249,7 +272,7 @@ function setupImpactSlider() {
   if (DOM.rescueSlider) {
     DOM.rescueSlider.addEventListener('input', (e) => {
       AppState.hypotheticalRescueRate = parseInt(e.target.value, 10);
-      renderImpactCalculator();
+      renderImpactCalculator(true);
     });
   }
 }
@@ -259,6 +282,30 @@ function selectQueueOrder(orderId) {
   AppState.currentRecommendation = null;
   renderQueueTable();
   renderOrderWorkbench();
+  if (DOM.queueTableBody) {
+    const selectionButton = Array.from(DOM.queueTableBody.querySelectorAll('.order-select-btn'))
+      .find(button => button.dataset.orderId === orderId);
+    if (selectionButton) selectionButton.focus();
+  }
+}
+
+function announceQueueResults(filteredOrders) {
+  if (!DOM.queueResultsStatus) return;
+  if (queueAnnouncementTimer !== null) clearTimeout(queueAnnouncementTimer);
+
+  const resultKey = filteredOrders.map(order => order.id).join('|');
+  const statusLabel = AppState.filterStatus === 'At Risk' ? 'at-risk ' : (AppState.filterStatus === 'Rescued' ? 'rescued ' : '');
+  const riskLabel = AppState.filterRisk === 'ALL' ? '' : `${AppState.filterRisk.toLowerCase()}-risk `;
+  const orderLabel = filteredOrders.length === 1 ? 'order' : 'orders';
+  const searchLabel = AppState.searchQuery ? ` for ${AppState.searchQuery}` : '';
+  const message = `${filteredOrders.length} ${statusLabel}${riskLabel}${orderLabel} shown${searchLabel}.`;
+
+  queueAnnouncementTimer = setTimeout(() => {
+    const announcementKey = `${AppState.searchQuery}|${AppState.filterRisk}|${AppState.filterStatus}|${resultKey}`;
+    if (announcementKey === lastQueueAnnouncementKey) return;
+    lastQueueAnnouncementKey = announcementKey;
+    DOM.queueResultsStatus.textContent = message;
+  }, 300);
 }
 
 // Render Master UI
@@ -290,6 +337,7 @@ function renderQueueTable() {
     AppState.filterRisk,
     AppState.filterStatus
   );
+  announceQueueResults(filtered);
 
   DOM.queueTableBody.textContent = '';
 
@@ -315,16 +363,26 @@ function renderQueueTable() {
 
     const row = createEl('tr', {
       className: isSelected ? 'selected' : '',
-      dataset: { orderId: order.id },
-      tabindex: '0',
-      'aria-selected': isSelected ? 'true' : 'false',
-      'aria-label': `Select order ${order.id}, ${order.customer.name}, ${riskData.level} risk, ${order.status}`
+      dataset: { orderId: order.id }
     });
 
-    row.appendChild(createEl('td', {
+    const orderIdCell = createEl('td', {
       style: { fontWeight: '700', color: 'var(--primary)' },
-      textContent: order.id
-    }));
+    });
+    const selectionButton = createEl('button', {
+      type: 'button',
+      className: 'order-select-btn',
+      dataset: { orderId: order.id },
+      textContent: order.id,
+      'aria-label': `Select order ${order.id}, ${order.customer.name}, ${riskData.level} risk, ${order.status}`,
+      'aria-pressed': isSelected ? 'true' : 'false'
+    });
+    selectionButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      selectQueueOrder(order.id);
+    });
+    orderIdCell.appendChild(selectionButton);
+    row.appendChild(orderIdCell);
 
     const customerCell = createEl('td');
     customerCell.appendChild(createEl('div', { style: { fontWeight: '600' }, textContent: order.customer.name }));
@@ -358,12 +416,8 @@ function renderQueueTable() {
     }));
     row.appendChild(statusCell);
 
-    row.addEventListener('click', () => selectQueueOrder(order.id));
-    row.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        selectQueueOrder(order.id);
-      }
+    row.addEventListener('click', (event) => {
+      if (!event.target.closest('.order-select-btn')) selectQueueOrder(order.id);
     });
 
     DOM.queueTableBody.appendChild(row);
@@ -438,7 +492,7 @@ function renderOrderWorkbench() {
     DOM.btnAnalyze.textContent = 'Order Already Rescued';
     DOM.btnAnalyze.setAttribute('aria-disabled', 'true');
 
-    const rescuedNotice = createEl('div', { className: 'alert-callout emerald', style: { marginTop: '1rem' }, role: 'status' });
+    const rescuedNotice = createEl('div', { className: 'alert-callout emerald', style: { marginTop: '1rem' } });
     rescuedNotice.appendChild(createEl('div', { textContent: `Order ${order.id} is Rescued!` }));
     rescuedNotice.appendChild(createEl('div', {
       style: { marginTop: '0.2rem', fontSize: '0.85rem' },
@@ -483,6 +537,9 @@ function handleAnalyzeAndRescue() {
   AppState.currentRecommendation = recommendation;
 
   renderRecommendationCard(recommendation, order);
+  if (DOM.appAnnouncement) {
+    DOM.appAnnouncement.textContent = `Recommendation for order ${order.id}: ${recommendation.actionTitle}. Use Apply Rescue Action to execute it.`;
+  }
 }
 
 // Render Engine Output Recommendation Card
@@ -566,10 +623,17 @@ function handleApplyRescue(order, rec) {
 
   AppState.currentRecommendation = null;
   renderAll();
+  if (DOM.workbenchHeading) DOM.workbenchHeading.focus();
+  if (DOM.appAnnouncement) {
+    const remainingAtRisk = AppState.orders.filter(item => item.status === 'At Risk').length;
+    const remainingLabel = remainingAtRisk === 1 ? 'order remains' : 'orders remain';
+    const rescuedLabel = AppState.sessionRescuedCount === 1 ? 'order' : 'orders';
+    DOM.appAnnouncement.textContent = `Order ${order.id} rescued. ${remainingAtRisk} ${remainingLabel} at risk. Session total: ${AppState.sessionRescuedCount} ${rescuedLabel} and ₹${AppState.sessionPreservedRevenue.toLocaleString('en-IN')} preserved.`;
+  }
 }
 
 // Render Business Impact Calculator (Interactive Scenario Math)
-function renderImpactCalculator() {
+function renderImpactCalculator(announce = false) {
   if (!DOM.sliderValDisplay) return;
   const ratePct = AppState.hypotheticalRescueRate;
   DOM.sliderValDisplay.textContent = `${ratePct}% Rescue Target`;
@@ -587,6 +651,14 @@ function renderImpactCalculator() {
   if (DOM.calcRescuedOrders) DOM.calcRescuedOrders.textContent = `${rescuedOrdersMonthly.toLocaleString('en-IN')} Orders / Mo`;
   if (DOM.calcMonthlyRevenue) DOM.calcMonthlyRevenue.textContent = `₹${(monthlyValuePreserved / 100000).toFixed(2)} Lakh / Mo (₹${monthlyValuePreserved.toLocaleString('en-IN')})`;
   if (DOM.calcAnnualRevenue) DOM.calcAnnualRevenue.textContent = `₹${(annualValuePreserved / 100000).toFixed(2)} Lakh / Year`;
+
+  if (announce && DOM.impactAnnouncement) {
+    if (impactAnnouncementTimer !== null) clearTimeout(impactAnnouncementTimer);
+    const announcement = `At a ${ratePct}% rescue target: ${rescuedOrdersMonthly.toLocaleString('en-IN')} estimated orders and ₹${monthlyValuePreserved.toLocaleString('en-IN')} preserved monthly; ₹${annualValuePreserved.toLocaleString('en-IN')} annualized.`;
+    impactAnnouncementTimer = setTimeout(() => {
+      DOM.impactAnnouncement.textContent = announcement;
+    }, 500);
+  }
 }
 
 // Render Session Audit Feed
@@ -636,7 +708,7 @@ function renderAuditFeed() {
 // Show Toast Notification
 function showToast(message) {
   if (!DOM.toastContainer) return;
-  const toast = createEl('div', { className: 'toast', role: 'status' });
+  const toast = createEl('div', { className: 'toast' });
   toast.appendChild(createEl('span', {
     style: { color: 'var(--emerald)', fontSize: '1.1rem' },
     'aria-hidden': 'true',

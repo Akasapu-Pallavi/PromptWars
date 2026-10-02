@@ -56,7 +56,7 @@ body {
   left: -9999px;
   top: 0.75rem;
   z-index: 1000;
-  background: var(--primary);
+  background: var(--primary-hover);
   color: #fff;
   padding: 0.5rem 0.85rem;
   border-radius: var(--radius-sm);
@@ -351,10 +351,10 @@ tbody tr:focus-visible {
   letter-spacing: 0.5px;
 }
 
-.badge-danger { background: var(--rose-light); color: var(--rose); border: 1px solid rgba(239,68,68,0.3); }
+.badge-danger { background: var(--rose-light); color: #ff7b7b; border: 1px solid rgba(239,68,68,0.3); }
 .badge-warning { background: var(--amber-light); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
 .badge-emerald { background: var(--emerald-light); color: var(--emerald); border: 1px solid rgba(16,185,129,0.3); }
-.badge-primary { background: var(--primary-light); color: var(--primary); border: 1px solid rgba(99,102,241,0.3); }
+.badge-primary { background: var(--primary-light); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
 .badge-info { background: var(--sky-light); color: var(--sky); border: 1px solid rgba(6,182,212,0.3); }
 
 /* Tables */
@@ -404,8 +404,15 @@ tbody tr.selected {
   border-left: 3px solid var(--primary);
 }
 
-tbody tr:focus {
-  background: var(--bg-card-hover);
+.order-select-btn {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #a5b4fc;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
 }
 
 /* Controls & Inputs */
@@ -459,9 +466,9 @@ tbody tr:focus {
 }
 
 .btn-filter.active {
-  background: var(--primary);
+  background: #5b5ee7;
   color: #fff;
-  border-color: var(--primary);
+  border-color: #5b5ee7;
 }
 
 .btn-filter:focus-visible {
@@ -471,7 +478,7 @@ tbody tr:focus {
 
 /* Action Buttons */
 .btn-action {
-  background: var(--primary);
+  background: #5b5ee7;
   color: #fff;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -494,13 +501,13 @@ tbody tr:focus {
 }
 
 .btn-action.emerald {
-  background: var(--emerald-dark);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  background: #047857;
+  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.3);
 }
 
 .btn-action.emerald:hover {
-  background: #047857;
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  background: #065f46;
+  box-shadow: 0 6px 16px rgba(4, 120, 87, 0.4);
 }
 
 .btn-action:disabled {
@@ -755,4 +762,19 @@ input[type=range]:focus-visible {
 .evidence-desc {
   font-size: 0.825rem;
   color: var(--text-sub);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .pulse-dot {
+    animation: none !important;
+  }
 }

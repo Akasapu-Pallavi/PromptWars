@@ -30,17 +30,17 @@
   </header>
 
   <!-- Navigation Tabs -->
-  <nav class="nav-tabs" aria-label="Main navigation">
-    <button type="button" class="tab-btn active" data-tab="command-center" aria-current="page" aria-controls="tab-command-center">
+  <nav class="nav-tabs" role="tablist" aria-label="Main sections">
+    <button type="button" id="nav-tab-command-center" class="tab-btn active" role="tab" aria-selected="true" tabindex="0" data-tab="command-center" aria-controls="tab-command-center">
       📊 Command Center
     </button>
-    <button type="button" class="tab-btn" data-tab="rescue-workbench" aria-current="false" aria-controls="tab-rescue-workbench">
+    <button type="button" id="nav-tab-rescue-workbench" class="tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="rescue-workbench" aria-controls="tab-rescue-workbench">
       🚨 Rescue Queue & Workbench <span class="tab-badge" id="queue-badge">8 At Risk</span>
     </button>
-    <button type="button" class="tab-btn" data-tab="business-impact" aria-current="false" aria-controls="tab-business-impact">
+    <button type="button" id="nav-tab-business-impact" class="tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="business-impact" aria-controls="tab-business-impact">
       📈 Business Impact Calculator
     </button>
-    <button type="button" class="tab-btn" data-tab="evidence-insights" aria-current="false" aria-controls="tab-evidence-insights">
+    <button type="button" id="nav-tab-evidence-insights" class="tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="evidence-insights" aria-controls="tab-evidence-insights">
       🔍 Evidence & Case Insights
     </button>
   </nav>
@@ -49,7 +49,7 @@
   <main id="main-content" class="main-container" tabindex="-1">
 
     <!-- TAB 1: COMMAND CENTER -->
-    <section id="tab-command-center" class="tab-content active" aria-labelledby="heading-command-center">
+    <section id="tab-command-center" class="tab-content active" role="tabpanel" aria-labelledby="nav-tab-command-center" tabindex="0">
       <!-- Product Purpose Callout Banner -->
       <div class="alert-callout info" role="note">
         <div>💡 <strong>Core Operations Principle:</strong></div>
@@ -99,12 +99,12 @@
           </div>
           <div>
             <div class="metric-label" id="label-rescued-count">Session Rescued Orders</div>
-            <div class="metric-value" id="metric-rescued-count" style="color: var(--emerald);" aria-labelledby="label-rescued-count" aria-live="polite">0</div>
+            <div class="metric-value" id="metric-rescued-count" style="color: var(--emerald);" aria-labelledby="label-rescued-count">0</div>
             <div class="metric-sub">Orders converted from At Risk to Rescued</div>
           </div>
           <div>
             <div class="metric-label" id="label-preserved-rev">Preserved Order Value</div>
-            <div class="metric-value" id="metric-preserved-rev" style="color: var(--emerald);" aria-labelledby="label-preserved-rev" aria-live="polite">₹0</div>
+            <div class="metric-value" id="metric-preserved-rev" style="color: var(--emerald);" aria-labelledby="label-preserved-rev">₹0</div>
             <div class="metric-sub">Direct order revenue saved</div>
           </div>
           <div>
@@ -138,7 +138,7 @@
             <h2 class="card-title">📋 Operations Rescue Activity Log</h2>
             <span class="badge badge-info">Audit Stream</span>
           </div>
-          <div id="audit-feed-list" style="max-height: 200px; overflow-y: auto;" aria-live="polite" aria-relevant="additions">
+          <div id="audit-feed-list" style="max-height: 200px; overflow-y: auto;">
             <!-- Rendered by app.js -->
           </div>
         </div>
@@ -146,7 +146,7 @@
     </section>
 
     <!-- TAB 2: RESCUE QUEUE & WORKBENCH -->
-    <section id="tab-rescue-workbench" class="tab-content" hidden aria-labelledby="heading-rescue-queue">
+    <section id="tab-rescue-workbench" class="tab-content" role="tabpanel" hidden aria-labelledby="nav-tab-rescue-workbench" tabindex="0">
       <div class="grid-workbench">
 
         <!-- Left Pane: At-Risk Rescue Queue -->
@@ -176,6 +176,7 @@
           </div>
 
           <!-- Queue Table -->
+          <div id="queue-results-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
           <div class="table-container">
             <table>
               <caption class="visually-hidden">At-risk order queue with customer, store, stock confidence, value, risk, and status</caption>
@@ -202,7 +203,7 @@
           <!-- Selected Order Summary Card -->
           <div class="card">
             <div class="card-header">
-              <h2 class="card-title">
+              <h2 class="card-title" id="heading-order-workbench" tabindex="-1">
                 🔍 Order Detail Workbench: <span id="wb-order-id" style="color: var(--primary);">ORD-8821</span>
               </h2>
               <div id="wb-risk-level" class="badge" aria-label="Risk level will be calculated">Calculating Risk</div>
@@ -248,9 +249,9 @@
             </div>
 
             <!-- Itemized Basket Breakdown -->
-            <div style="font-weight: 700; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-sub);">
+            <h3 style="font-weight: 700; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-sub);">
               ORDER BASKET & INVENTORY CONFIDENCE
-            </div>
+            </h3>
             <div id="wb-items-list" class="detail-box" style="margin-bottom: 1.25rem;">
               <!-- Rendered by app.js -->
             </div>
@@ -262,7 +263,8 @@
           </div>
 
           <!-- Dynamic Engine Recommendation Card Output Area -->
-          <div id="rec-card-container" aria-live="polite">
+          <div id="rescue-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+          <div id="rec-card-container">
             <!-- Rendered by app.js upon clicking Analyze -->
           </div>
 
@@ -272,7 +274,7 @@
     </section>
 
     <!-- TAB 3: BUSINESS IMPACT CALCULATOR -->
-    <section id="tab-business-impact" class="tab-content" hidden aria-labelledby="heading-business-impact">
+    <section id="tab-business-impact" class="tab-content" role="tabpanel" hidden aria-labelledby="nav-tab-business-impact" tabindex="0">
       <div class="card" style="margin-bottom: 1.5rem;">
         <div class="card-header">
           <h2 class="card-title" id="heading-business-impact">📈 Business Impact & Scenario Calculator</h2>
@@ -313,6 +315,7 @@
             <span class="slider-value-display" id="slider-val-display">30% Rescue Target</span>
           </div>
           <input type="range" id="rescue-slider" min="5" max="90" step="5" value="30" aria-valuemin="5" aria-valuemax="90" aria-valuenow="30" aria-valuetext="30 percent rescue target" aria-describedby="slider-val-display">
+          <div id="impact-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
           <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
             <span>5% (Conservative)</span>
             <span>30% (Default Rescue Rate)</span>
@@ -330,7 +333,7 @@
     </section>
 
     <!-- TAB 4: EVIDENCE & WHY NOVA RESCUE -->
-    <section id="tab-evidence-insights" class="tab-content" hidden aria-labelledby="heading-evidence">
+    <section id="tab-evidence-insights" class="tab-content" role="tabpanel" hidden aria-labelledby="nav-tab-evidence-insights" tabindex="0">
       <div class="card">
         <div class="card-header">
           <h2 class="card-title" id="heading-evidence">🔍 Evidence Chain: Why NOVA RESCUE Works</h2>
@@ -345,7 +348,7 @@
           <div class="evidence-step">
             <span class="evidence-num">01</span>
             <div class="evidence-stat">35%</div>
-            <div class="evidence-title">Unavailability Cancellation Trigger</div>
+            <h3 class="evidence-title">Unavailability Cancellation Trigger</h3>
             <div class="evidence-desc">
               Over a third of NOVA CART's 4,235 monthly cancellations stem directly from out-of-stock items. NOVA RESCUE intercepts orders before cancellation occurs.
             </div>
@@ -354,7 +357,7 @@
           <div class="evidence-step">
             <span class="evidence-num">02</span>
             <div class="evidence-stat">29%</div>
-            <div class="evidence-title">Phantom Stock Gap</div>
+            <h3 class="evidence-title">Phantom Stock Gap</h3>
             <div class="evidence-desc">
               29% of customers report available items turning out unavailable. NOVA RESCUE uses real-time confidence scores to validate stock before dispatching store picking.
             </div>
@@ -363,7 +366,7 @@
           <div class="evidence-step">
             <span class="evidence-num">03</span>
             <div class="evidence-stat">39%</div>
-            <div class="evidence-title">Store Inventory Maintenance Burden</div>
+            <h3 class="evidence-title">Store Inventory Maintenance Burden</h3>
             <div class="evidence-desc">
               39% of partner stores struggle with manual inventory updates. NOVA RESCUE offloads store burden by automatically re-routing orders to nearby stores with verified stock.
             </div>
@@ -372,7 +375,7 @@
           <div class="evidence-step">
             <span class="evidence-num">04</span>
             <div class="evidence-stat">5,900</div>
-            <div class="evidence-title">Support Ticket Bottleneck</div>
+            <h3 class="evidence-title">Support Ticket Bottleneck</h3>
             <div class="evidence-desc">
               Monthly support tickets exploded to 5,900 with a 9.2-hour resolution time. 19% are availability tickets. Automated 1-click rescue actions resolve issues in <3 seconds.
             </div>
@@ -381,7 +384,7 @@
           <div class="evidence-step">
             <span class="evidence-num">05</span>
             <div class="evidence-stat">72%</div>
-            <div class="evidence-title">Customer Retention Hook (3rd Order)</div>
+            <h3 class="evidence-title">Customer Retention Hook (3rd Order)</h3>
             <div class="evidence-desc">
               Customers completing 3 orders have a 72% probability of reordering next month. Rescuing at-risk orders at the 2nd/3rd order milestone unlocks long-term customer LTV.
             </div>
@@ -394,7 +397,8 @@
   </main>
 
   <!-- Global Toast Notification Container -->
-  <div id="toast-container" class="toast-container" aria-live="assertive" aria-atomic="true" role="status"></div>
+  <div id="app-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="toast-container" class="toast-container" aria-hidden="true"></div>
 
   <!-- JavaScript Modules -->
   <script src="js/data.js"></script>

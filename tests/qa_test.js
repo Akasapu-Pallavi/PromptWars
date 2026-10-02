@@ -81,6 +81,61 @@ function resetState() {
 console.log('NOVA RESCUE QA Tests');
 console.log('====================\n');
 
+const indexSource = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const appSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+const stylesSource = fs.readFileSync(path.join(__dirname, '..', 'css', 'styles.css'), 'utf8');
+
+test('A11y. Tabs expose tab semantics and keyboard navigation', () => {
+  assert(/<nav class="nav-tabs" role="tablist"/.test(indexSource));
+  assertEqual((indexSource.match(/role="tab"/g) || []).length, 4);
+  assertEqual((indexSource.match(/role="tabpanel"/g) || []).length, 4);
+  assert(indexSource.includes('aria-selected="true" tabindex="0"'));
+  assert(appSource.includes("event.key === 'ArrowLeft'"));
+  assert(appSource.includes("event.key === 'ArrowRight'"));
+  assert(appSource.includes("event.key === 'Home'"));
+  assert(appSource.includes("event.key === 'End'"));
+  assert(appSource.includes("btn.setAttribute('aria-selected', isActive ? 'true' : 'false')"));
+});
+
+test('A11y. Queue selection uses a native button and restores focus after rendering', () => {
+  assert(appSource.includes("className: 'order-select-btn'"));
+  assert(appSource.includes("'aria-pressed': isSelected ? 'true' : 'false'"));
+  assert(appSource.includes(".find(button => button.dataset.orderId === orderId)"));
+  assert(appSource.includes('if (selectionButton) selectionButton.focus();'));
+  assert(appSource.includes("event.key === 'Enter'" ) === false, 'Selection should use native button keyboard behavior');
+});
+
+test('A11y. Rescue keeps focus and announces concise polite status', () => {
+  assert(indexSource.includes('id="heading-order-workbench" tabindex="-1"'));
+  assert(indexSource.includes('id="app-announcement" class="visually-hidden" role="status" aria-live="polite"'));
+  assert(appSource.includes('if (DOM.workbenchHeading) DOM.workbenchHeading.focus();'));
+  assert(appSource.includes('Recommendation for order ${order.id}'));
+  assert(appSource.includes('Order ${order.id} rescued.'));
+});
+
+test('A11y. Queue, audit, toast, and recommendation live regions avoid duplication', () => {
+  assert(indexSource.includes('id="queue-results-status" class="visually-hidden" role="status" aria-live="polite"'));
+  assert(!/id="audit-feed-list"[^>]*aria-live/.test(indexSource));
+  assert(!/id="rec-card-container"[^>]*aria-live/.test(indexSource));
+  assert(!/id="toast-container"[^>]*aria-live/.test(indexSource));
+  assert(!/className: 'toast', role: 'status'/.test(appSource));
+  assert(appSource.includes('function announceQueueResults(filteredOrders)'));
+  assert(appSource.includes('}, 300);'));
+});
+
+test('A11y. Impact summary is debounced and reduced motion is respected', () => {
+  assert(indexSource.includes('id="impact-announcement" class="visually-hidden" role="status" aria-live="polite"'));
+  assert(appSource.includes('if (announce && DOM.impactAnnouncement)'));
+  assert(appSource.includes('}, 500);'));
+  assert(stylesSource.includes('@media (prefers-reduced-motion: reduce)'));
+  assert(stylesSource.includes('.pulse-dot {\n    animation: none !important;'));
+});
+
+test('A11y. Styled evidence and basket titles are headings', () => {
+  assertEqual((indexSource.match(/<h3 class="evidence-title">/g) || []).length, 5);
+  assert(indexSource.includes('<h3 style="font-weight: 700; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-sub);">'));
+});
+
 // 1. Decision engine
 test('1. Decision engine returns a structured recommendation for every demo order', () => {
   NOVACartData.orders.forEach((order) => {
