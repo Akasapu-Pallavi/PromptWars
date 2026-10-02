@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NOVA RESCUE — Order Rescue & Local Store Fulfillment Decision Engine</title>
+  <meta name="description" content="NOVA RESCUE is an order rescue and local-store fulfillment decision engine for NOVA CART operations staff to turn inventory uncertainty into actionable rescue decisions before cancellation.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Header & Brand Bar -->
+  <header class="header-bar">
+    <div class="brand-wrapper">
+      <div class="brand-logo">NOVA</div>
+      <div class="brand-text">
+        <h1>NOVA RESCUE <span class="badge badge-primary">Fulfillment Engine v2.4</span></h1>
+        <div class="tagline">Rescue the order before it becomes a cancellation.</div>
+      </div>
+    </div>
+    <div class="live-indicator">
+      <span class="pulse-dot"></span>
+      <span>LOCAL DECISION ENGINE • DEMO MODE</span>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs" aria-label="Main Navigation">
+    <button class="tab-btn active" data-tab="command-center">
+      📊 Command Center
+    </button>
+    <button class="tab-btn" data-tab="rescue-workbench">
+      🚨 Rescue Queue & Workbench <span class="tab-badge" id="queue-badge">8 At Risk</span>
+    </button>
+    <button class="tab-btn" data-tab="business-impact">
+      📈 Business Impact Calculator
+    </button>
+    <button class="tab-btn" data-tab="evidence-insights">
+      🔍 Evidence & Case Insights
+    </button>
+  </nav>
+
+  <!-- Main Application Container -->
+  <main class="main-container">
+
+    <!-- TAB 1: COMMAND CENTER -->
+    <section id="tab-command-center" class="tab-content active">
+      <!-- Product Purpose Callout Banner -->
+      <div class="alert-callout info">
+        <div>💡 <strong>Core Operations Principle:</strong></div>
+        <div>NOVA RESCUE is not merely an inventory dashboard. Its purpose is to <em>prevent avoidable cancellations by turning inventory uncertainty into an actionable rescue decision</em>.</div>
+      </div>
+
+      <!-- Top KPI Metric Cards -->
+      <div class="grid-cols-4" style="margin-bottom: 1.5rem;">
+        <div class="metric-card sky">
+          <div class="metric-label">Monthly Orders</div>
+          <div class="metric-value">38,500</div>
+          <div class="metric-sub">Average Order Value: ₹486</div>
+        </div>
+
+        <div class="metric-card amber">
+          <div class="metric-label">Cancellation Rate</div>
+          <div class="metric-value">11%</div>
+          <div class="metric-sub">4,235 Total Cancellations / Month</div>
+        </div>
+
+        <div class="metric-card rose">
+          <div class="metric-label">Availability Cancellations</div>
+          <div class="metric-value">~1,482</div>
+          <div class="metric-sub">35% of all cancellations caused by stock OOS</div>
+        </div>
+
+        <div class="metric-card amber">
+          <div class="metric-label">Monthly Support Tickets</div>
+          <div class="metric-value">5,900</div>
+          <div class="metric-sub">19% concern unavailable items (Avg 9.2 hr SLA)</div>
+        </div>
+      </div>
+
+      <!-- Live Session Rescue Performance Bar -->
+      <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #121826, #1a233a); border-color: var(--primary);">
+        <div class="card-header">
+          <div class="card-title">
+            <span style="color: var(--emerald);">⚡ Live Session Rescued Performance</span>
+          </div>
+          <span class="badge badge-emerald">Real-time Engine Active</span>
+        </div>
+        <div class="grid-cols-4">
+          <div>
+            <div class="metric-label">Active At-Risk Queue</div>
+            <div class="metric-value" id="metric-active-at-risk" style="color: var(--rose);">8</div>
+            <div class="metric-sub">Pending Operations Decision</div>
+          </div>
+          <div>
+            <div class="metric-label">Session Rescued Orders</div>
+            <div class="metric-value" id="metric-rescued-count" style="color: var(--emerald);">0</div>
+            <div class="metric-sub">Orders converted from At Risk to Rescued</div>
+          </div>
+          <div>
+            <div class="metric-label">Preserved Order Value</div>
+            <div class="metric-value" id="metric-preserved-rev" style="color: var(--emerald);">₹0</div>
+            <div class="metric-sub">Direct order revenue saved</div>
+          </div>
+          <div>
+            <div class="metric-label">Retention LTV Value</div>
+            <div class="metric-value" style="color: var(--sky);">72%</div>
+            <div class="metric-sub">Repeat order probability unlocked (3rd order hook)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Executive Overview Grid -->
+      <div class="grid-cols-2">
+        <!-- Core Challenge Context Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🏪 NOVA CART Ecosystem Bottlenecks</div>
+          </div>
+          <div style="font-size: 0.875rem; color: var(--text-sub);">
+            <ul style="padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.65rem;">
+              <li><strong>620 Partner Stores & 120,000 Users:</strong> Rapid local quick-commerce scale creates physical inventory sync gaps across neighborhood micro-stores.</li>
+              <li><strong>29% Phantom Stock Complaints:</strong> Customers order products listed as available that turn out out-of-stock upon store picking.</li>
+              <li><strong>39% Partner Store Effort Burden:</strong> Stores report manual catalog inventory updating is too labor-intensive, leading to 23% occasional order rejections.</li>
+              <li><strong>5,900 Support Tickets / Month:</strong> Support volume surged from 3,100 to 5,900 with 9.2 hour resolution times, creating customer churn.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Session Audit Log Feed -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📋 Operations Rescue Activity Log</div>
+            <span class="badge badge-info">Audit Stream</span>
+          </div>
+          <div id="audit-feed-list" style="max-height: 200px; overflow-y: auto;">
+            <!-- Rendered by app.js -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: RESCUE QUEUE & WORKBENCH -->
+    <section id="tab-rescue-workbench" class="tab-content">
+      <div class="grid-workbench">
+
+        <!-- Left Pane: At-Risk Rescue Queue -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📥 At-Risk Order Queue</div>
+            <span class="badge badge-danger">Requires Action</span>
+          </div>
+
+          <!-- Queue Search & Filters -->
+          <div class="controls-bar">
+            <input type="text" id="search-input" class="search-input" placeholder="Search Order ID, Store, Customer...">
+            
+            <div class="filter-btn-group">
+              <button class="btn-filter active" data-risk="ALL">All Risk</button>
+              <button class="btn-filter" data-risk="High">High</button>
+              <button class="btn-filter" data-risk="Medium">Med</button>
+              <button class="btn-filter" data-risk="Low">Low</button>
+            </div>
+
+            <div class="filter-btn-group">
+              <button class="btn-filter active" data-status="ALL">All Status</button>
+              <button class="btn-filter" data-status="At Risk">At Risk</button>
+              <button class="btn-filter" data-status="Rescued">Rescued</button>
+            </div>
+          </div>
+
+          <!-- Queue Table -->
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Store</th>
+                  <th>Stock Conf.</th>
+                  <th>Value</th>
+                  <th>Risk</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="queue-table-body">
+                <!-- Rendered dynamically by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right Pane: Order Detail & Decision Engine Workbench -->
+        <div>
+          <!-- Selected Order Summary Card -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                🔍 Order Detail Workbench: <span id="wb-order-id" style="color: var(--primary);">ORD-8821</span>
+              </div>
+              <div id="wb-risk-level" class="badge badge-danger">High Risk</div>
+            </div>
+
+            <!-- Customer & Store Metadata -->
+            <div class="grid-cols-2" style="gap: 1rem; margin-bottom: 1rem;">
+              <div class="detail-box">
+                <div class="detail-row">
+                  <span class="detail-key">Customer:</span>
+                  <span class="detail-val" id="wb-customer-name">Ananya Sharma</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">Phone:</span>
+                  <span class="detail-val" id="wb-customer-phone">+91 98765 43210</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">LTV Category:</span>
+                  <span class="detail-val" id="wb-customer-ltv" style="color: var(--emerald);">3rd Order Conversion Priority</span>
+                </div>
+              </div>
+
+              <div class="detail-box">
+                <div class="detail-row">
+                  <span class="detail-key">Fulfilling Store:</span>
+                  <span class="detail-val" id="wb-store-name">FreshMart Koramangala</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">Store ID:</span>
+                  <span class="detail-val" id="wb-store-id">STR-101</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">Order Value / ETA:</span>
+                  <span class="detail-val"><span id="wb-order-value">₹200</span> • <span id="wb-eta">18 mins</span></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Risk Failure Reason Callout -->
+            <div class="alert-callout amber" style="margin-bottom: 1rem;">
+              <div>⚠️ <strong>Primary Risk Signal:</strong> <span id="wb-failure-desc">Primary item "Organic Whole Milk 1L" is out of stock (18% confidence).</span></div>
+              <div style="font-size: 0.775rem; margin-top: 0.2rem;">Risk Score: <strong id="wb-risk-score">85/100</strong></div>
+            </div>
+
+            <!-- Itemized Basket Breakdown -->
+            <div style="font-weight: 700; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-sub);">
+              ORDER BASKET & INVENTORY CONFIDENCE
+            </div>
+            <div id="wb-items-list" class="detail-box" style="margin-bottom: 1.25rem;">
+              <!-- Rendered by app.js -->
+            </div>
+
+            <!-- Analyze & Rescue Trigger Button -->
+            <button id="btn-analyze" class="btn-action" style="width: 100%;">
+              ⚡ Analyze & Rescue Order
+            </button>
+          </div>
+
+          <!-- Dynamic Engine Recommendation Card Output Area -->
+          <div id="rec-card-container">
+            <!-- Rendered by app.js upon clicking Analyze -->
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 3: BUSINESS IMPACT CALCULATOR -->
+    <section id="tab-business-impact" class="tab-content">
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <div class="card-title">📈 Business Impact & Scenario Calculator</div>
+          <span class="badge badge-emerald">Interactive Financial Model</span>
+        </div>
+
+        <div class="alert-callout info">
+          <div>📌 <strong>Model Methodology:</strong></div>
+          <div>This business impact engine clearly separates <strong>Verified Case Facts</strong> (from Nova Cart metrics) from <strong>Configurable Scenario Estimates</strong>.</div>
+        </div>
+
+        <!-- Case Facts vs Scenario Estimates Comparison Grid -->
+        <div class="grid-cols-2" style="margin-bottom: 1.5rem;">
+          <div class="detail-box">
+            <h4 style="color: var(--primary); margin-bottom: 0.75rem;">1. Verified Case Facts (NOVA CART Baseline)</h4>
+            <div class="detail-row"><span class="detail-key">Monthly Orders:</span><span class="detail-val">38,500 orders</span></div>
+            <div class="detail-row"><span class="detail-key">Baseline Cancellation Rate:</span><span class="detail-val">11% (4,235 orders)</span></div>
+            <div class="detail-row"><span class="detail-key">Unavailability Cancellation Share:</span><span class="detail-val">35% of total cancellations</span></div>
+            <div class="detail-row"><span class="detail-key">Availability-Related Cancellations:</span><span class="detail-val" style="color: var(--rose);">~1,482 orders / month</span></div>
+            <div class="detail-row"><span class="detail-key">Average Order Value (AOV):</span><span class="detail-val">₹486</span></div>
+            <div class="detail-row"><span class="detail-key">3rd-Order Customer Retention Probability:</span><span class="detail-val" style="color: var(--emerald);">72%</span></div>
+          </div>
+
+          <div class="detail-box">
+            <h4 style="color: var(--emerald); margin-bottom: 0.75rem;">2. Scenario Calculations (Target Rescue Engine)</h4>
+            <div class="detail-row"><span class="detail-key">Total Availability Risk Pool:</span><span class="detail-val">1,482 orders / mo</span></div>
+            <div class="detail-row"><span class="detail-key">Target Rescue Efficiency:</span><span class="detail-val" id="calc-rescue-eff-label">30% Default Target</span></div>
+            <div class="detail-row"><span class="detail-key">Monthly Rescued Orders:</span><span class="detail-val" id="calc-rescued-orders" style="color: var(--emerald); font-size: 1.1rem; font-weight: 800;">445 Orders / Mo</span></div>
+            <div class="detail-row"><span class="detail-key">Monthly Preserved Revenue (@ ₹486 AOV):</span><span class="detail-val" id="calc-monthly-revenue" style="color: var(--emerald); font-size: 1.1rem; font-weight: 800;">₹2.16 Lakh / Mo</span></div>
+            <div class="detail-row"><span class="detail-key">Annualized Preserved Value:</span><span class="detail-val" id="calc-annual-revenue" style="color: var(--sky); font-size: 1.1rem; font-weight: 800;">₹25.95 Lakh / Year</span></div>
+          </div>
+        </div>
+
+        <!-- Interactive Rescue Rate Slider -->
+        <div class="slider-container">
+          <div class="slider-header">
+            <span class="slider-title">Configure Target Hypothetical Rescue Rate (%)</span>
+            <span class="slider-value-display" id="slider-val-display">30% Rescue Target</span>
+          </div>
+          <input type="range" id="rescue-slider" min="5" max="90" step="5" value="30">
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+            <span>5% (Conservative)</span>
+            <span>30% (Default Rescue Rate)</span>
+            <span>60% (Aggressive Operations)</span>
+            <span>90% (Maximum Recovery)</span>
+          </div>
+        </div>
+
+        <!-- Explicit Disclaimer Callout -->
+        <div class="alert-callout amber">
+          <div>⚠️ <strong>Explicit Scenario Disclaimer:</strong></div>
+          <div>The revenue projections above are <em>hypothetical scenario estimates</em> derived from target rescue rates applied to historical case parameters. They serve as business model planning targets and are not guaranteed revenue.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: EVIDENCE & WHY NOVA RESCUE -->
+    <section id="tab-evidence-insights" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🔍 Evidence Chain: Why NOVA RESCUE Works</div>
+          <span class="badge badge-primary">Case Facts Synthesis</span>
+        </div>
+
+        <p style="color: var(--text-sub); font-size: 0.9rem; margin-bottom: 1.25rem;">
+          The NOVA RESCUE decision engine directly targets the systemic breakages identified in NOVA CART's operational data:
+        </p>
+
+        <div class="evidence-chain">
+          <div class="evidence-step">
+            <span class="evidence-num">01</span>
+            <div class="evidence-stat">35%</div>
+            <div class="evidence-title">Unavailability Cancellation Trigger</div>
+            <div class="evidence-desc">
+              Over a third of NOVA CART's 4,235 monthly cancellations stem directly from out-of-stock items. NOVA RESCUE intercepts orders before cancellation occurs.
+            </div>
+          </div>
+
+          <div class="evidence-step">
+            <span class="evidence-num">02</span>
+            <div class="evidence-stat">29%</div>
+            <div class="evidence-title">Phantom Stock Gap</div>
+            <div class="evidence-desc">
+              29% of customers report available items turning out unavailable. NOVA RESCUE uses real-time confidence scores to validate stock before dispatching store picking.
+            </div>
+          </div>
+
+          <div class="evidence-step">
+            <span class="evidence-num">03</span>
+            <div class="evidence-stat">39%</div>
+            <div class="evidence-title">Store Inventory Maintenance Burden</div>
+            <div class="evidence-desc">
+              39% of partner stores struggle with manual inventory updates. NOVA RESCUE offloads store burden by automatically re-routing orders to nearby stores with verified stock.
+            </div>
+          </div>
+
+          <div class="evidence-step">
+            <span class="evidence-num">04</span>
+            <div class="evidence-stat">5,900</div>
+            <div class="evidence-title">Support Ticket Bottleneck</div>
+            <div class="evidence-desc">
+              Monthly support tickets exploded to 5,900 with a 9.2-hour resolution time. 19% are availability tickets. Automated 1-click rescue actions resolve issues in <3 seconds.
+            </div>
+          </div>
+
+          <div class="evidence-step">
+            <span class="evidence-num">05</span>
+            <div class="evidence-stat">72%</div>
+            <div class="evidence-title">Customer Retention Hook (3rd Order)</div>
+            <div class="evidence-desc">
+              Customers completing 3 orders have a 72% probability of reordering next month. Rescuing at-risk orders at the 2nd/3rd order milestone unlocks long-term customer LTV.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Global Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- JavaScript Modules -->
+  <script src="js/data.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
