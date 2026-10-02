@@ -439,6 +439,41 @@ test('15c. Combined search + risk + status filters compose correctly', () => {
   assert(results.every((o) => o.store.name.toLowerCase().indexOf('freshmart') !== -1 || o.id.toLowerCase().indexOf('freshmart') !== -1 || o.customer.name.toLowerCase().indexOf('freshmart') !== -1));
 });
 
+// 16. Add Test Order feature
+test('16. Add Test Order control is present and the app exposes the creation flow', () => {
+  assert(indexSource.includes('+ Add Test Order') || indexSource.includes('Add Test Order'));
+  assert(appSource.includes('openAddOrderDialog'));
+  assert(appSource.includes('createTestOrder'));
+  assert(appSource.includes('addTestOrder'));
+});
+
+test('16b. Quick scenarios produce valid, realistic demo orders', () => {
+  resetState();
+  const nearby = NOVAApp.populateTestScenario('NEARBY_STORE_AVAILABLE');
+  assert(nearby && nearby.customer && nearby.customer.name);
+  assert(nearby.id.startsWith('TEST-'));
+  assert(Array.isArray(nearby.items) && nearby.items.length > 0);
+  assert(nearby.store && nearby.store.id);
+  assert(typeof nearby.orderValue === 'number' && nearby.orderValue > 0);
+  assertEqual(nearby.status, 'At Risk');
+  assert(typeof nearby.failureDescription === 'string' && nearby.failureDescription.length > 0);
+  const rec = NOVAEngine.analyzeOrder(nearby);
+  assert(rec && rec.actionType);
+});
+
+test('16c. A generated test order can be added to the queue and selected', () => {
+  resetState();
+  const base = NOVAApp.populateTestScenario('SUBSTITUTE_AVAILABLE');
+  const order = NOVAApp.createTestOrder(base);
+  const before = NOVAApp.AppState.orders.length;
+  const added = NOVAApp.addTestOrder(order);
+  assertEqual(added, true);
+  assertEqual(NOVAApp.AppState.orders.length, before + 1);
+  const saved = NOVAApp.AppState.orders.find((candidate) => candidate.id === order.id);
+  assert(saved && saved.status === 'At Risk');
+  assertEqual(NOVAApp.AppState.selectedOrderId, order.id);
+});
+
 console.log('\n--------------------');
 console.log(`Result: ${passed} PASS, ${failed} FAIL, ${passed + failed} total`);
 if (failures.length) {

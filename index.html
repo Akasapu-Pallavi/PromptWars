@@ -160,6 +160,10 @@
           <div class="controls-bar">
             <label for="search-input" class="visually-hidden">Search orders by Order ID, store, or customer</label>
             <input type="text" id="search-input" class="search-input" placeholder="Search Order ID, Store, Customer..." autocomplete="off">
+
+            <button type="button" id="add-test-order-btn" class="btn-action" aria-haspopup="dialog" aria-controls="add-order-dialog">
+              + Add Test Order
+            </button>
             
             <div class="filter-btn-group" role="group" aria-label="Filter by risk level">
               <button type="button" class="btn-filter active" data-risk="ALL" aria-pressed="true">All Risk</button>
@@ -395,6 +399,127 @@
     </section>
 
   </main>
+
+  <div id="add-order-dialog" class="modal-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="add-order-dialog-title">
+    <div class="modal-panel" tabindex="-1">
+      <div class="modal-header">
+        <div>
+          <p class="modal-kicker">Runtime Test Orders</p>
+          <h2 id="add-order-dialog-title">Add Test Order</h2>
+        </div>
+        <button type="button" id="add-order-close-btn" class="btn-icon" aria-label="Close add test order form">×</button>
+      </div>
+
+      <form id="add-order-form" novalidate>
+        <div class="scenario-section">
+          <div class="scenario-header">
+            <span>Quick Test Scenario</span>
+          </div>
+          <div class="scenario-grid">
+            <button type="button" class="btn-scenario" data-scenario="NEARBY_STORE_AVAILABLE">Nearby Store Available</button>
+            <button type="button" class="btn-scenario" data-scenario="SUBSTITUTE_AVAILABLE">Substitute Available</button>
+            <button type="button" class="btn-scenario" data-scenario="DELIVERY_DELAY">Delivery Delay</button>
+            <button type="button" class="btn-scenario" data-scenario="MULTIPLE_ITEMS_OOS">Multiple Items OOS</button>
+            <button type="button" class="btn-scenario" data-scenario="HIGH_LTV_CUSTOMER">High-LTV Customer</button>
+            <button type="button" class="btn-scenario" data-scenario="NORMAL_LOW_RISK">Normal / Low-Risk Order</button>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="field-group">
+            <label for="test-order-customer-name">Customer name</label>
+            <input id="test-order-customer-name" name="customerName" type="text" maxlength="80" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-id">Order ID</label>
+            <input id="test-order-id" name="orderId" type="text" maxlength="30" placeholder="TEST-8845">
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-store-id">Store ID</label>
+            <input id="test-order-store-id" name="storeId" type="text" maxlength="20" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-store-name">Store</label>
+            <input id="test-order-store-name" name="storeName" type="text" maxlength="80" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-value">Order value (₹)</label>
+            <input id="test-order-value" name="orderValue" type="number" min="10" step="1" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-eta">ETA (mins)</label>
+            <input id="test-order-eta" name="etaMins" type="number" min="5" step="1" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-completed-orders">Completed orders</label>
+            <input id="test-order-completed-orders" name="completedOrders" type="number" min="0" step="1" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-ltv">Customer/LTV info</label>
+            <input id="test-order-ltv" name="ltvCategory" type="text" maxlength="100" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-inventory-confidence">Inventory confidence (%)</label>
+            <input id="test-order-inventory-confidence" name="inventoryConfidence" type="number" min="0" max="100" step="1" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-failure-mode">Failure condition</label>
+            <select id="test-order-failure-mode" name="primaryFailureMode" required>
+              <option value="UNAVAILABLE_ITEM">UNAVAILABLE_ITEM</option>
+              <option value="STORE_REJECTION_RISK">STORE_REJECTION_RISK</option>
+              <option value="DELIVERY_ETA_SPIKE">DELIVERY_ETA_SPIKE</option>
+              <option value="MULTI_ITEM_OOS">MULTI_ITEM_OOS</option>
+              <option value="STORE_DISPATCH_DELAY">STORE_DISPATCH_DELAY</option>
+            </select>
+          </div>
+
+          <div class="field-group field-full">
+            <label for="test-order-failure-description">Failure description</label>
+            <textarea id="test-order-failure-description" name="failureDescription" rows="3" required></textarea>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-item-name">Item name</label>
+            <input id="test-order-item-name" name="itemName" type="text" maxlength="120" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-item-qty">Item qty</label>
+            <input id="test-order-item-qty" name="itemQty" type="number" min="1" step="1" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-item-price">Item unit price (₹)</label>
+            <input id="test-order-item-price" name="itemUnitPrice" type="number" min="1" step="1" required>
+          </div>
+
+          <div class="field-group">
+            <label for="test-order-item-confidence">Item stock confidence (%)</label>
+            <input id="test-order-item-confidence" name="itemInventoryConfidence" type="number" min="0" max="100" step="1" required>
+          </div>
+
+          <div class="field-group checkbox-group">
+            <label for="test-order-substitution">Customer substitution preference</label>
+            <input id="test-order-substitution" name="acceptsSubstitutions" type="checkbox">
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="add-order-cancel-btn" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-action">Add Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Global Toast Notification Container -->
   <div id="app-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>

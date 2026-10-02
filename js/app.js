@@ -17,7 +17,9 @@ const AppState = {
   hypotheticalRescueRate: 30, // Default 30%
   sessionRescuedCount: 0,
   sessionPreservedRevenue: 0,
-  auditLog: []
+  auditLog: [],
+  nextTestOrderNumber: 8845,
+  addOrderDialogOpen: false
 };
 
 globalRoot.AppState = AppState;
@@ -122,6 +124,339 @@ function resetDemoState() {
   AppState.sessionRescuedCount = 0;
   AppState.sessionPreservedRevenue = 0;
   AppState.auditLog = [];
+  AppState.nextTestOrderNumber = 8845;
+  AppState.addOrderDialogOpen = false;
+}
+
+function generateTestOrderId() {
+  let nextNumber = AppState.nextTestOrderNumber || 8845;
+  let candidate = `TEST-${nextNumber}`;
+
+  while (AppState.orders.some((order) => order.id === candidate)) {
+    nextNumber += 1;
+    candidate = `TEST-${nextNumber}`;
+  }
+
+  AppState.nextTestOrderNumber = nextNumber + 1;
+  return candidate;
+}
+
+function normalizeTestOrderItem(item, fallbackName = 'Demo Item') {
+  const itemName = item && item.name ? item.name : fallbackName;
+  const qty = Number(item && item.qty != null ? item.qty : 1);
+  const unitPrice = Number(item && item.unitPrice != null ? item.unitPrice : 120);
+  const inStock = Boolean(item ? item.inStock : true);
+  const inventoryConfidence = Number(item && item.inventoryConfidence != null ? item.inventoryConfidence : (inStock ? 94 : 28));
+
+  return {
+    name: itemName,
+    qty: Number.isFinite(qty) && qty > 0 ? qty : 1,
+    unitPrice: Number.isFinite(unitPrice) && unitPrice > 0 ? unitPrice : 120,
+    inStock,
+    inventoryConfidence: Number.isFinite(inventoryConfidence) ? Math.max(0, Math.min(100, inventoryConfidence)) : 85
+  };
+}
+
+function validateTestOrder(order) {
+  const errors = [];
+  if (!order || !order.customer || !order.customer.name || !String(order.customer.name).trim()) {
+    errors.push('Customer name is required.');
+  }
+  if (!order || !order.store || !order.store.id || !String(order.store.id).trim()) {
+    errors.push('Store ID is required.');
+  }
+  if (!order || !order.store || !order.store.name || !String(order.store.name).trim()) {
+    errors.push('Store name is required.');
+  }
+  if (!order || !Array.isArray(order.items) || order.items.length === 0) {
+    errors.push('At least one item is required.');
+  }
+  if (!order || !(Number(order.orderValue) > 0)) {
+    errors.push('Order value must be greater than zero.');
+  }
+  if (!order || !(Number(order.currentEtaMins) > 0)) {
+    errors.push('ETA must be greater than zero.');
+  }
+  if (order && order.id && AppState.orders.some((candidate) => candidate.id === order.id && candidate !== order)) {
+    errors.push('Order ID already exists.');
+  }
+  return errors;
+}
+
+function createTestOrder(data = {}) {
+  const source = data && data.customer ? data : (data && data.orderData ? data.orderData : data);
+  const customerInput = source.customer || {};
+  const storeInput = source.store || {};
+  const itemList = Array.isArray(source.items) && source.items.length ? source.items : [{
+    name: source.itemName || 'Demo Grocery Item',
+    qty: source.itemQty || 1,
+    unitPrice: source.itemUnitPrice || 120,
+    inStock: source.itemInStock !== undefined ? source.itemInStock : false,
+    inventoryConfidence: source.itemInventoryConfidence != null ? source.itemInventoryConfidence : 28
+  }];
+
+  const customerName = source.customerName || customerInput.name || 'Rahul Sharma';
+  const customerPhone = source.phone || customerInput.phone || '+91 XXXX XXX 123';
+  const completedOrders = Number(source.completedOrders != null ? source.completedOrders : (customerInput.completedOrders != null ? customerInput.completedOrders : 2));
+  const ltvCategory = source.ltvCategory || customerInput.ltvCategory || 'Established Repeat Buyer';
+  const acceptsSubstitutions = source.acceptsSubstitutions != null ? Boolean(source.acceptsSubstitutions) : Boolean(customerInput.acceptsSubstitutions !== undefined ? customerInput.acceptsSubstitutions : true);
+
+  const storeId = source.storeId || storeInput.id || 'STR-104';
+  const storeName = source.storeName || storeInput.name || 'FreshMart Indiranagar';
+  const items = itemList.map((item) => normalizeTestOrderItem(item, source.itemName || 'Demo Grocery Item'));
+  const orderValue = Number(source.orderValue != null ? source.orderValue : 420);
+  const currentEtaMins = Number(source.currentEtaMins != null ? source.currentEtaMins : (source.etaMins != null ? source.etaMins : 18));
+
+  return {
+    id: source.id || source.orderId || generateTestOrderId(),
+    customer: {
+      name: customerName,
+      phone: customerPhone,
+      completedOrders: Number.isFinite(completedOrders) ? completedOrders : 2,
+      ltvCategory,
+      acceptsSubstitutions
+    },
+    store: {
+      id: storeId,
+      name: storeName
+    },
+    items,
+    currentEtaMins: Number.isFinite(currentEtaMins) && currentEtaMins > 0 ? currentEtaMins : 18,
+    orderValue: Number.isFinite(orderValue) && orderValue > 0 ? orderValue : 420,
+    status: source.status || 'At Risk',
+    primaryFailureMode: source.primaryFailureMode || (items.some((item) => !item.inStock) ? 'UNAVAILABLE_ITEM' : 'DELIVERY_ETA_SPIKE'),
+    failureDescription: source.failureDescription || `Runtime demo order for ${customerName}. Inventory risk requires proactive action.`,
+    timeElapsedMins: Number(source.timeElapsedMins != null ? source.timeElapsedMins : (source.timeElapsedMins !== undefined ? source.timeElapsedMins : 8))
+  };
+}
+
+const TEST_SCENARIOS = {
+  NEARBY_STORE_AVAILABLE: {
+    customerName: 'Rahul Sharma',
+    storeId: 'STR-104',
+    storeName: 'FreshMart Indiranagar',
+    completedOrders: 3,
+    ltvCategory: 'High LTV Conversion Risk (3rd Order Hook)',
+    acceptsSubstitutions: true,
+    orderValue: 520,
+    currentEtaMins: 26,
+    primaryFailureMode: 'UNAVAILABLE_ITEM',
+    failureDescription: 'FreshMart Indiranagar is low on organic staples. Nearby partner inventory is available and a re-route is recommended.',
+    timeElapsedMins: 9,
+    items: [
+      { name: 'Organic Whole Milk 1L', qty: 2, unitPrice: 75, inStock: false, inventoryConfidence: 18 },
+      { name: 'Multigrain Bread 400g', qty: 1, unitPrice: 50, inStock: true, inventoryConfidence: 96 }
+    ]
+  },
+  SUBSTITUTE_AVAILABLE: {
+    customerName: 'Ananya Reddy',
+    storeId: 'STR-108',
+    storeName: 'DailyNeeds HSR Layout',
+    completedOrders: 5,
+    ltvCategory: 'Established Repeat Buyer',
+    acceptsSubstitutions: true,
+    orderValue: 445,
+    currentEtaMins: 22,
+    primaryFailureMode: 'UNAVAILABLE_ITEM',
+    failureDescription: 'Store inventory for Farm Fresh Eggs is unconfirmed. Customer accepts substitutions and an in-stock equivalent is available.',
+    timeElapsedMins: 8,
+    items: [
+      { name: 'Farm Fresh Eggs (12pk)', qty: 1, unitPrice: 90, inStock: false, inventoryConfidence: 32 },
+      { name: 'Amul Butter 500g', qty: 1, unitPrice: 275, inStock: true, inventoryConfidence: 98 }
+    ]
+  },
+  DELIVERY_DELAY: {
+    customerName: 'Priya Nair',
+    storeId: 'STR-201',
+    storeName: 'QuickBazaar Indiranagar',
+    completedOrders: 2,
+    ltvCategory: 'High LTV Conversion Risk (3rd Order Hook)',
+    acceptsSubstitutions: false,
+    orderValue: 285,
+    currentEtaMins: 35,
+    primaryFailureMode: 'STORE_DISPATCH_DELAY',
+    failureDescription: 'Store dispatch delay is adding 15 minutes to the order. Customer has a narrow cancellation window and needs proactive ETA alerting.',
+    timeElapsedMins: 14,
+    items: [
+      { name: 'Fresh Paneer 200g', qty: 2, unitPrice: 120, inStock: true, inventoryConfidence: 85 },
+      { name: 'Capsicum Green 250g', qty: 1, unitPrice: 45, inStock: true, inventoryConfidence: 90 }
+    ]
+  },
+  MULTIPLE_ITEMS_OOS: {
+    customerName: 'Vikram Sethi',
+    storeId: 'STR-205',
+    storeName: 'GreenGrocers Jayanagar',
+    completedOrders: 12,
+    ltvCategory: 'VIP Customer',
+    acceptsSubstitutions: false,
+    orderValue: 1240,
+    currentEtaMins: 28,
+    primaryFailureMode: 'MULTI_ITEM_OOS',
+    failureDescription: 'Multiple premium basket items are out of stock across the local store and require split fulfillment or manual intervention.',
+    timeElapsedMins: 11,
+    items: [
+      { name: 'Hass Avocado (2pk)', qty: 2, unitPrice: 290, inStock: false, inventoryConfidence: 12 },
+      { name: 'Epigamia Greek Yogurt 400g', qty: 2, unitPrice: 180, inStock: false, inventoryConfidence: 15 },
+      { name: 'Blueberries 125g', qty: 1, unitPrice: 300, inStock: true, inventoryConfidence: 88 }
+    ]
+  },
+  HIGH_LTV_CUSTOMER: {
+    customerName: 'Sneha Patel',
+    storeId: 'STR-101',
+    storeName: 'FreshMart Koramangala',
+    completedOrders: 2,
+    ltvCategory: 'High LTV Conversion Risk (3rd Order Hook)',
+    acceptsSubstitutions: true,
+    orderValue: 680,
+    currentEtaMins: 24,
+    primaryFailureMode: 'UNAVAILABLE_ITEM',
+    failureDescription: 'Customer is in the critical third-order conversion window and the main grocery item is unavailable in-store.',
+    timeElapsedMins: 7,
+    items: [
+      { name: 'Raw Pressery Almond Milk 1L', qty: 1, unitPrice: 220, inStock: false, inventoryConfidence: 28 },
+      { name: 'Granola Oats 500g', qty: 1, unitPrice: 310, inStock: true, inventoryConfidence: 96 }
+    ]
+  },
+  NORMAL_LOW_RISK: {
+    customerName: 'Kiran Kumar',
+    storeId: 'STR-104',
+    storeName: 'FreshMart Indiranagar',
+    completedOrders: 1,
+    ltvCategory: 'New Customer (1st Order)',
+    acceptsSubstitutions: true,
+    orderValue: 196,
+    currentEtaMins: 17,
+    primaryFailureMode: 'DELIVERY_ETA_SPIKE',
+    failureDescription: 'Shopping basket is stable and in-stock, but a brief ETA extension should be communicated to reduce churn risk.',
+    timeElapsedMins: 5,
+    items: [
+      { name: 'Fresh Tomatoes 1kg', qty: 1, unitPrice: 48, inStock: true, inventoryConfidence: 94 },
+      { name: 'Onions 1kg', qty: 1, unitPrice: 42, inStock: true, inventoryConfidence: 98 },
+      { name: 'Potatoes 1kg', qty: 1, unitPrice: 38, inStock: true, inventoryConfidence: 96 }
+    ]
+  }
+};
+
+function populateTestScenario(scenarioKey = 'NEARBY_STORE_AVAILABLE') {
+  const scenario = TEST_SCENARIOS[scenarioKey] || TEST_SCENARIOS.NEARBY_STORE_AVAILABLE;
+  return createTestOrder({
+    ...scenario,
+    id: generateTestOrderId()
+  });
+}
+
+function announceTestOrderAdded(order) {
+  if (DOM.appAnnouncement) {
+    DOM.appAnnouncement.textContent = `Test order ${order.id} added successfully.`;
+  }
+  showToast(`Test order ${order.id} added successfully.`);
+}
+
+function openAddOrderDialog(defaultScenario = 'NEARBY_STORE_AVAILABLE') {
+  if (!DOM.addOrderDialog) return;
+  const scenario = TEST_SCENARIOS[defaultScenario] || TEST_SCENARIOS.NEARBY_STORE_AVAILABLE;
+  const order = createTestOrder({
+    ...scenario,
+    id: generateTestOrderId()
+  });
+  populateAddOrderForm(order);
+  DOM.addOrderDialog.removeAttribute('hidden');
+  AppState.addOrderDialogOpen = true;
+  document.body.classList.add('dialog-open');
+  const firstField = DOM.addOrderDialog.querySelector('input:not([type="hidden"]), select, textarea');
+  if (firstField) firstField.focus();
+}
+
+function closeAddOrderDialog() {
+  if (!DOM.addOrderDialog) return;
+  DOM.addOrderDialog.setAttribute('hidden', 'hidden');
+  AppState.addOrderDialogOpen = false;
+  document.body.classList.remove('dialog-open');
+  if (DOM.addTestOrderBtn) DOM.addTestOrderBtn.focus();
+}
+
+function populateAddOrderForm(orderData) {
+  const form = DOM.addOrderForm;
+  if (!form || !orderData) return;
+  const order = createTestOrder(orderData);
+
+  form.elements.customerName.value = order.customer.name;
+  form.elements.orderId.value = order.id;
+  form.elements.storeId.value = order.store.id;
+  form.elements.storeName.value = order.store.name;
+  form.elements.orderValue.value = String(order.orderValue);
+  form.elements.etaMins.value = String(order.currentEtaMins);
+  form.elements.completedOrders.value = String(order.customer.completedOrders);
+  form.elements.ltvCategory.value = order.customer.ltvCategory;
+  form.elements.inventoryConfidence.value = String(Math.min(100, Math.max(0, order.items[0].inventoryConfidence)));
+  form.elements.primaryFailureMode.value = order.primaryFailureMode;
+  form.elements.failureDescription.value = order.failureDescription;
+  form.elements.itemName.value = order.items[0].name;
+  form.elements.itemQty.value = String(order.items[0].qty);
+  form.elements.itemUnitPrice.value = String(order.items[0].unitPrice);
+  form.elements.itemInventoryConfidence.value = String(order.items[0].inventoryConfidence);
+  form.elements.acceptsSubstitutions.checked = Boolean(order.customer.acceptsSubstitutions);
+}
+
+function handleAddOrderFormSubmit(event) {
+  event.preventDefault();
+  if (!DOM.addOrderForm) return;
+
+  const form = DOM.addOrderForm;
+  const payload = {
+    id: (form.elements.orderId.value || '').trim(),
+    customerName: form.elements.customerName.value.trim(),
+    storeId: form.elements.storeId.value.trim(),
+    storeName: form.elements.storeName.value.trim(),
+    orderValue: Number(form.elements.orderValue.value),
+    etaMins: Number(form.elements.etaMins.value),
+    completedOrders: Number(form.elements.completedOrders.value),
+    ltvCategory: form.elements.ltvCategory.value.trim(),
+    acceptsSubstitutions: form.elements.acceptsSubstitutions.checked,
+    primaryFailureMode: form.elements.primaryFailureMode.value,
+    failureDescription: form.elements.failureDescription.value.trim(),
+    itemName: form.elements.itemName.value.trim(),
+    itemQty: Number(form.elements.itemQty.value),
+    itemUnitPrice: Number(form.elements.itemUnitPrice.value),
+    itemInventoryConfidence: Number(form.elements.itemInventoryConfidence.value),
+    phone: '+91 XXXX XXX 123',
+    items: [{
+      name: form.elements.itemName.value.trim(),
+      qty: Number(form.elements.itemQty.value),
+      unitPrice: Number(form.elements.itemUnitPrice.value),
+      inStock: Number(form.elements.itemInventoryConfidence.value) >= 85,
+      inventoryConfidence: Number(form.elements.itemInventoryConfidence.value)
+    }],
+    currentEtaMins: Number(form.elements.etaMins.value)
+  };
+
+  const order = createTestOrder(payload);
+  const errors = validateTestOrder(order);
+  if (errors.length) {
+    showToast(errors[0]);
+    if (DOM.appAnnouncement) DOM.appAnnouncement.textContent = errors[0];
+    return false;
+  }
+
+  addTestOrder(order);
+  return true;
+}
+
+function addTestOrder(orderData) {
+  const order = createTestOrder(orderData);
+  const errors = validateTestOrder(order);
+  if (errors.length) {
+    showToast(errors[0]);
+    return false;
+  }
+
+  AppState.orders.unshift(order);
+  AppState.selectedOrderId = order.id;
+  AppState.currentRecommendation = null;
+  closeAddOrderDialog();
+  renderAll();
+  announceTestOrderAdded(order);
+  return true;
 }
 
 // Initialize Application
@@ -148,6 +483,12 @@ function initApp() {
     searchInput: document.getElementById('search-input'),
     riskFilterBtns: document.querySelectorAll('.btn-filter[data-risk]'),
     statusFilterBtns: document.querySelectorAll('.btn-filter[data-status]'),
+    addTestOrderBtn: document.getElementById('add-test-order-btn'),
+    addOrderDialog: document.getElementById('add-order-dialog'),
+    addOrderCloseBtn: document.getElementById('add-order-close-btn'),
+    addOrderCancelBtn: document.getElementById('add-order-cancel-btn'),
+    addOrderForm: document.getElementById('add-order-form'),
+    scenarioBtns: document.querySelectorAll('.btn-scenario'),
     
     // Workbench Details
     wbOrderId: document.getElementById('wb-order-id'),
@@ -186,6 +527,7 @@ function initApp() {
   setupTabListeners();
   setupQueueControls();
   setupImpactSlider();
+  setupAddOrderDialog();
   renderAll();
 }
 
@@ -265,6 +607,39 @@ function setupQueueControls() {
   if (DOM.btnAnalyze) {
     DOM.btnAnalyze.addEventListener('click', handleAnalyzeAndRescue);
   }
+}
+
+function setupAddOrderDialog() {
+  if (DOM.addTestOrderBtn) {
+    DOM.addTestOrderBtn.addEventListener('click', () => openAddOrderDialog('NEARBY_STORE_AVAILABLE'));
+  }
+
+  if (DOM.addOrderCloseBtn) {
+    DOM.addOrderCloseBtn.addEventListener('click', closeAddOrderDialog);
+  }
+
+  if (DOM.addOrderCancelBtn) {
+    DOM.addOrderCancelBtn.addEventListener('click', closeAddOrderDialog);
+  }
+
+  if (DOM.addOrderForm) {
+    DOM.addOrderForm.addEventListener('submit', handleAddOrderFormSubmit);
+  }
+
+  DOM.scenarioBtns.forEach((button) => {
+    button.addEventListener('click', () => {
+      const scenarioKey = button.getAttribute('data-scenario') || 'NEARBY_STORE_AVAILABLE';
+      const order = populateTestScenario(scenarioKey);
+      populateAddOrderForm(order);
+      if (DOM.addOrderForm && DOM.addOrderForm.elements.customerName) DOM.addOrderForm.elements.customerName.focus();
+    });
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && AppState.addOrderDialogOpen && DOM.addOrderDialog && !DOM.addOrderDialog.hasAttribute('hidden')) {
+      closeAddOrderDialog();
+    }
+  });
 }
 
 // Setup Impact Slider Listener
@@ -733,6 +1108,12 @@ var NOVAApp = {
   computeImpactScenario,
   applyRescueAction,
   resetDemoState,
+  createTestOrder,
+  populateTestScenario,
+  validateTestOrder,
+  addTestOrder,
+  openAddOrderDialog,
+  closeAddOrderDialog,
   initApp
 };
 globalRoot.NOVAApp = NOVAApp;
