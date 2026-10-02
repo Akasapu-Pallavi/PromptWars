@@ -4,7 +4,9 @@
  * customer LTV risk, and ETA thresholds to recommend actionable fulfillment decisions.
  */
 
-var NOVAEngine = window.NOVAEngine = {
+var globalRoot = (typeof window !== 'undefined') ? window : (typeof globalThis !== 'undefined' ? globalThis : this);
+
+var NOVAEngine = globalRoot.NOVAEngine = {
   /**
    * Calculate Rescue Risk Score (0-100) & Risk Level
    */
@@ -106,8 +108,10 @@ var NOVAEngine = window.NOVAEngine = {
     }
 
     // Rule 2: In-Stock Product Substitution (Check if a direct substitute exists for unavailable item)
-    const substituteOptions = NOVACartData.substitutes[minConfidenceItem.name];
-    if (!minConfidenceItem.inStock && substituteOptions && substituteOptions.length > 0 && order.primaryFailureMode === 'UNAVAILABLE_ITEM' && (order.id === 'ORD-8824' || order.id === 'ORD-8836')) {
+    const substituteOptions = (NOVACartData.substitutes[minConfidenceItem.name] || []).filter(substitute =>
+      substitute.storeId === order.store.id && substitute.stockConfidence >= 85
+    );
+    if (!minConfidenceItem.inStock && substituteOptions.length > 0 && order.primaryFailureMode === 'UNAVAILABLE_ITEM' && order.customer.acceptsSubstitutions === true) {
       const topSub = substituteOptions[0];
       const priceDelta = topSub.unitPrice - minConfidenceItem.unitPrice;
       const priceDeltaStr = priceDelta > 0 ? `+₹${priceDelta}` : `₹${priceDelta}`;
@@ -188,6 +192,4 @@ var NOVAEngine = window.NOVAEngine = {
   }
 };
 
-if (typeof window !== 'undefined') {
-  window.NOVAEngine = NOVAEngine;
-}
+globalRoot.NOVAEngine = NOVAEngine;

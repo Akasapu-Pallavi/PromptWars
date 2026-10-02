@@ -3,7 +3,9 @@
  * Contains official case stats, store network, product catalog, and realistic demo orders.
  */
 
-var NOVACartData = window.NOVACartData = {
+var globalRoot = (typeof window !== 'undefined') ? window : (typeof globalThis !== 'undefined' ? globalThis : this);
+
+var NOVACartData = globalRoot.NOVACartData = {
   // Official Case Facts
   metrics: {
     partnerStores: 620,
@@ -51,11 +53,10 @@ var NOVACartData = window.NOVACartData = {
       primaryFailureMode: 'UNAVAILABLE_ITEM',
       failureDescription: 'Primary item "Organic Whole Milk 1L" is out of stock (18% confidence). Store #101 inventory sync lagging.',
       timeElapsedMins: 6,
-      riskLevel: 'High'
     },
     {
       id: 'ORD-8824',
-      customer: { name: 'Rahul Verma', phone: '+91 XXXX XXX 678', completedOrders: 5, ltvCategory: 'Established Repeat Buyer' },
+      customer: { name: 'Rahul Verma', phone: '+91 XXXX XXX 678', completedOrders: 5, ltvCategory: 'Established Repeat Buyer', acceptsSubstitutions: true },
       store: { id: 'STR-108', name: 'DailyNeeds HSR Layout' },
       items: [
         { name: 'Farm Fresh Eggs (12pk)', qty: 1, unitPrice: 90, inStock: false, inventoryConfidence: 32 },
@@ -68,7 +69,6 @@ var NOVACartData = window.NOVACartData = {
       primaryFailureMode: 'UNAVAILABLE_ITEM',
       failureDescription: 'Item "Farm Fresh Eggs (12pk)" unconfirmed. Store reports physical stock depleted.',
       timeElapsedMins: 8,
-      riskLevel: 'Medium'
     },
     {
       id: 'ORD-8827',
@@ -84,7 +84,6 @@ var NOVACartData = window.NOVACartData = {
       primaryFailureMode: 'STORE_DISPATCH_DELAY',
       failureDescription: 'Store #201 prep delay (+15 mins). High historical order rejection risk (23%).',
       timeElapsedMins: 14,
-      riskLevel: 'Medium'
     },
     {
       id: 'ORD-8830',
@@ -101,7 +100,6 @@ var NOVACartData = window.NOVACartData = {
       primaryFailureMode: 'MULTI_ITEM_OOS',
       failureDescription: 'Multiple premium items out of stock across local store network. High basket value at risk.',
       timeElapsedMins: 11,
-      riskLevel: 'High'
     },
     {
       id: 'ORD-8833',
@@ -117,11 +115,10 @@ var NOVACartData = window.NOVACartData = {
       primaryFailureMode: 'STORE_REJECTION_RISK',
       failureDescription: 'Store #302 stock confidence low (22%) and store rejection risk is High.',
       timeElapsedMins: 5,
-      riskLevel: 'High'
     },
     {
       id: 'ORD-8836',
-      customer: { name: 'Karan Patel', phone: '+91 XXXX XXX 987', completedOrders: 4, ltvCategory: 'Established Repeat Buyer' },
+      customer: { name: 'Karan Patel', phone: '+91 XXXX XXX 987', completedOrders: 4, ltvCategory: 'Established Repeat Buyer', acceptsSubstitutions: true },
       store: { id: 'STR-101', name: 'FreshMart Koramangala' },
       items: [
         { name: 'Raw Pressery Almond Milk 1L', qty: 1, unitPrice: 220, inStock: false, inventoryConfidence: 28 },
@@ -133,7 +130,6 @@ var NOVACartData = window.NOVACartData = {
       primaryFailureMode: 'UNAVAILABLE_ITEM',
       failureDescription: 'Item "Raw Pressery Almond Milk 1L" unavailable. Alternative substitute available in stock.',
       timeElapsedMins: 7,
-      riskLevel: 'Medium'
     },
     {
       id: 'ORD-8839',
@@ -150,7 +146,6 @@ var NOVACartData = window.NOVACartData = {
       primaryFailureMode: 'DELIVERY_ETA_SPIKE',
       failureDescription: 'Traffic congestion adding +12 mins to ETA. Risk of customer cancellation due to delay.',
       timeElapsedMins: 16,
-      riskLevel: 'Low'
     },
     {
       id: 'ORD-8842',
@@ -166,7 +161,6 @@ var NOVACartData = window.NOVACartData = {
       primaryFailureMode: 'UNAVAILABLE_ITEM',
       failureDescription: 'Primary item "Malai Paneer 200g" unconfirmed. Nearby Store #309 has 96% stock confidence.',
       timeElapsedMins: 9,
-      riskLevel: 'High'
     }
   ],
 
@@ -199,6 +193,4 @@ var NOVACartData = window.NOVACartData = {
   }
 };
 
-if (typeof window !== 'undefined') {
-  window.NOVACartData = NOVACartData;
-}
+globalRoot.NOVACartData = NOVACartData;

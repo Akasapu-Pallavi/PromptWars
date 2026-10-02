@@ -4,6 +4,8 @@
  * live impact slider calculation, and audit logging.
  */
 
+var globalRoot = (typeof window !== 'undefined') ? window : (typeof globalThis !== 'undefined' ? globalThis : this);
+
 // Application State
 const AppState = {
   orders: [],
@@ -18,13 +20,106 @@ const AppState = {
   auditLog: []
 };
 
-if (typeof window !== 'undefined') {
-  window.AppState = AppState;
-}
+globalRoot.AppState = AppState;
 
 
 // DOM Elements Cache
 let DOM = {};
+
+function createEl(tag, props, ...children) {
+  const node = document.createElement(tag);
+  if (props) {
+    Object.keys(props).forEach((key) => {
+      const value = props[key];
+      if (value == null || value === false) return;
+      if (key === 'className') {
+        node.className = value;
+      } else if (key === 'textContent') {
+        node.textContent = value;
+      } else if (key === 'dataset') {
+        Object.keys(value).forEach((dataKey) => {
+          node.dataset[dataKey] = value[dataKey];
+        });
+      } else if (key === 'style' && typeof value === 'object') {
+        Object.assign(node.style, value);
+      } else if (typeof value === 'function' && key.length > 2 && key.slice(0, 2) === 'on') {
+        node.addEventListener(key.slice(2).toLowerCase(), value);
+      } else {
+        node.setAttribute(key, value === true ? '' : String(value));
+      }
+    });
+  }
+  children.flat().forEach((child) => {
+    if (child == null || child === false) return;
+    node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+  });
+  return node;
+}
+
+function getOrderRisk(order) {
+  return NOVAEngine.calculateRiskScore(order);
+}
+
+function filterOrders(orders, searchQuery, filterRisk, filterStatus) {
+  const q = (searchQuery || '').trim().toLowerCase();
+  return orders.filter((order) => {
+    if (filterRisk !== 'ALL' && getOrderRisk(order).level !== filterRisk) return false;
+    if (filterStatus !== 'ALL' && order.status !== filterStatus) return false;
+    if (q) {
+      const matchesId = order.id.toLowerCase().includes(q);
+      const matchesCustomer = order.customer.name.toLowerCase().includes(q);
+      const matchesStore = order.store.name.toLowerCase().includes(q);
+      if (!matchesId && !matchesCustomer && !matchesStore) return false;
+    }
+    return true;
+  });
+}
+
+function computeImpactScenario(ratePct, metrics) {
+  const m = metrics || NOVACartData.metrics;
+  const totalAvailabilityCancellations = Math.round(m.monthlyOrders * m.cancellationRate * m.unavailabilityCancellationShare);
+  const rescuedOrdersMonthly = Math.round(totalAvailabilityCancellations * (ratePct / 100));
+  const monthlyValuePreserved = Math.round(rescuedOrdersMonthly * m.averageOrderValue);
+  const annualValuePreserved = monthlyValuePreserved * 12;
+  return {
+    totalAvailabilityCancellations,
+    rescuedOrdersMonthly,
+    monthlyValuePreserved,
+    annualValuePreserved
+  };
+}
+
+function applyRescueAction(order, rec) {
+  if (!order || order.status === 'Rescued') return false;
+
+  order.status = 'Rescued';
+  AppState.sessionRescuedCount += 1;
+  AppState.sessionPreservedRevenue += order.orderValue;
+
+  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  AppState.auditLog.unshift({
+    id: order.id,
+    actionTitle: rec.actionTitle,
+    orderValue: order.orderValue,
+    customerName: order.customer.name,
+    timestamp
+  });
+
+  return true;
+}
+
+function resetDemoState() {
+  AppState.orders = JSON.parse(JSON.stringify(NOVACartData.orders));
+  AppState.selectedOrderId = 'ORD-8821';
+  AppState.currentRecommendation = null;
+  AppState.filterRisk = 'ALL';
+  AppState.filterStatus = 'ALL';
+  AppState.searchQuery = '';
+  AppState.hypotheticalRescueRate = 30;
+  AppState.sessionRescuedCount = 0;
+  AppState.sessionPreservedRevenue = 0;
+  AppState.auditLog = [];
+}
 
 // Initialize Application
 function initApp() {
@@ -71,6 +166,7 @@ function initApp() {
     // Impact Calculator
     rescueSlider: document.getElementById('rescue-slider'),
     sliderValDisplay: document.getElementById('slider-val-display'),
+    calcRescueEffLabel: document.getElementById('calc-rescue-eff-label'),
     calcRescuedOrders: document.getElementById('calc-rescued-orders'),
     calcMonthlyRevenue: document.getElementById('calc-monthly-revenue'),
     calcAnnualRevenue: document.getElementById('calc-annual-revenue'),
@@ -92,12 +188,20 @@ function setupTabListeners() {
     btn.addEventListener('click', () => {
       const targetTab = btn.getAttribute('data-tab');
       
-      DOM.tabBtns.forEach(b => b.classList.remove('active'));
-      DOM.tabContents.forEach(c => c.classList.remove('active'));
-
-      btn.classList.add('active');
-      const contentEl = document.getElementById(`tab-${targetTab}`);
-      if (contentEl) contentEl.classList.add('active');
+      DOM.tabBtns.forEach(b => {
+        const isActive = b === btn;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-current', isActive ? 'page' : 'false');
+      });
+      DOM.tabContents.forEach(c => {
+        const isActive = c.id === `tab-${targetTab}`;
+        c.classList.toggle('active', isActive);
+        if (isActive) {
+          c.removeAttribute('hidden');
+        } else {
+          c.setAttribute('hidden', '');
+        }
+      });
     });
   });
 }
@@ -113,8 +217,11 @@ function setupQueueControls() {
 
   DOM.riskFilterBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      DOM.riskFilterBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      DOM.riskFilterBtns.forEach(b => {
+        const isActive = b === btn;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
       AppState.filterRisk = btn.getAttribute('data-risk');
       renderQueueTable();
     });
@@ -122,8 +229,11 @@ function setupQueueControls() {
 
   DOM.statusFilterBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      DOM.statusFilterBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      DOM.statusFilterBtns.forEach(b => {
+        const isActive = b === btn;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
       AppState.filterStatus = btn.getAttribute('data-status');
       renderQueueTable();
     });
@@ -142,6 +252,13 @@ function setupImpactSlider() {
       renderImpactCalculator();
     });
   }
+}
+
+function selectQueueOrder(orderId) {
+  AppState.selectedOrderId = orderId;
+  AppState.currentRecommendation = null;
+  renderQueueTable();
+  renderOrderWorkbench();
 }
 
 // Render Master UI
@@ -167,68 +284,89 @@ function renderCommandCenterKPIs() {
 function renderQueueTable() {
   if (!DOM.queueTableBody) return;
 
-  const filtered = AppState.orders.filter(order => {
-    // Risk Filter
-    if (AppState.filterRisk !== 'ALL' && order.riskLevel !== AppState.filterRisk) return false;
-    // Status Filter
-    if (AppState.filterStatus !== 'ALL' && order.status !== AppState.filterStatus) return false;
-    // Search Query
-    if (AppState.searchQuery) {
-      const q = AppState.searchQuery;
-      const matchesId = order.id.toLowerCase().includes(q);
-      const matchesCustomer = order.customer.name.toLowerCase().includes(q);
-      const matchesStore = order.store.name.toLowerCase().includes(q);
-      if (!matchesId && !matchesCustomer && !matchesStore) return false;
-    }
-    return true;
-  });
+  const filtered = filterOrders(
+    AppState.orders,
+    AppState.searchQuery,
+    AppState.filterRisk,
+    AppState.filterStatus
+  );
+
+  DOM.queueTableBody.textContent = '';
 
   if (filtered.length === 0) {
-    DOM.queueTableBody.innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align: center; color: var(--text-sub); padding: 2rem;">
-          No orders match current search or filter criteria.
-        </td>
-      </tr>
-    `;
+    const emptyRow = createEl('tr', null,
+      createEl('td', {
+        colspan: '7',
+        style: { textAlign: 'center', color: 'var(--text-sub)', padding: '2rem' },
+        textContent: 'No orders match current search or filter criteria.'
+      })
+    );
+    DOM.queueTableBody.appendChild(emptyRow);
     return;
   }
 
-  DOM.queueTableBody.innerHTML = filtered.map(order => {
+  filtered.forEach((order) => {
     const isSelected = order.id === AppState.selectedOrderId;
-    const riskBadgeClass = order.riskLevel === 'High' ? 'badge-danger' : (order.riskLevel === 'Medium' ? 'badge-warning' : 'badge-emerald');
+    const riskData = getOrderRisk(order);
+    const riskBadgeClass = riskData.level === 'High' ? 'badge-danger' : (riskData.level === 'Medium' ? 'badge-warning' : 'badge-emerald');
     const statusBadgeClass = order.status === 'Rescued' ? 'badge-emerald' : 'badge-danger';
     const minConfidence = Math.min(...order.items.map(i => i.inventoryConfidence));
-    const confBadgeClass = minConfidence < 25 ? 'color: var(--rose)' : (minConfidence < 50 ? 'color: var(--amber)' : 'color: var(--emerald)');
+    const confColor = minConfidence < 25 ? 'var(--rose)' : (minConfidence < 50 ? 'var(--amber)' : 'var(--emerald)');
 
-    return `
-      <tr class="${isSelected ? 'selected' : ''}" data-order-id="${order.id}">
-        <td style="font-weight: 700; color: var(--primary);">${order.id}</td>
-        <td>
-          <div style="font-weight: 600;">${order.customer.name}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">${order.customer.completedOrders} orders</div>
-        </td>
-        <td>
-          <div style="font-weight: 600;">${order.store.name}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">${order.store.id}</div>
-        </td>
-        <td style="font-weight: 700; ${confBadgeClass}">${minConfidence}% Stock Conf.</td>
-        <td style="font-weight: 700;">₹${order.orderValue}</td>
-        <td><span class="badge ${riskBadgeClass}">${order.riskLevel}</span></td>
-        <td><span class="badge ${statusBadgeClass}">${order.status}</span></td>
-      </tr>
-    `;
-  }).join('');
-
-  // Table Row Click Handlers
-  DOM.queueTableBody.querySelectorAll('tr[data-order-id]').forEach(row => {
-    row.addEventListener('click', () => {
-      const orderId = row.getAttribute('data-order-id');
-      AppState.selectedOrderId = orderId;
-      AppState.currentRecommendation = null; // Reset recommendation state for new selection
-      renderQueueTable();
-      renderOrderWorkbench();
+    const row = createEl('tr', {
+      className: isSelected ? 'selected' : '',
+      dataset: { orderId: order.id },
+      tabindex: '0',
+      'aria-selected': isSelected ? 'true' : 'false',
+      'aria-label': `Select order ${order.id}, ${order.customer.name}, ${riskData.level} risk, ${order.status}`
     });
+
+    row.appendChild(createEl('td', {
+      style: { fontWeight: '700', color: 'var(--primary)' },
+      textContent: order.id
+    }));
+
+    const customerCell = createEl('td');
+    customerCell.appendChild(createEl('div', { style: { fontWeight: '600' }, textContent: order.customer.name }));
+    customerCell.appendChild(createEl('div', { style: { fontSize: '0.75rem', color: 'var(--text-muted)' }, textContent: `${order.customer.completedOrders} orders` }));
+    row.appendChild(customerCell);
+
+    const storeCell = createEl('td');
+    storeCell.appendChild(createEl('div', { style: { fontWeight: '600' }, textContent: order.store.name }));
+    storeCell.appendChild(createEl('div', { style: { fontSize: '0.75rem', color: 'var(--text-muted)' }, textContent: order.store.id }));
+    row.appendChild(storeCell);
+
+    row.appendChild(createEl('td', {
+      style: { fontWeight: '700', color: confColor },
+      textContent: `${minConfidence}% Stock Conf.`
+    }));
+    row.appendChild(createEl('td', { style: { fontWeight: '700' }, textContent: `₹${order.orderValue}` }));
+
+    const riskCell = createEl('td');
+    riskCell.appendChild(createEl('span', {
+      className: `badge ${riskBadgeClass}`,
+      textContent: riskData.level,
+      'aria-label': `Risk level ${riskData.level}`
+    }));
+    row.appendChild(riskCell);
+
+    const statusCell = createEl('td');
+    statusCell.appendChild(createEl('span', {
+      className: `badge ${statusBadgeClass}`,
+      textContent: order.status,
+      'aria-label': `Order status ${order.status}`
+    }));
+    row.appendChild(statusCell);
+
+    row.addEventListener('click', () => selectQueueOrder(order.id));
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selectQueueOrder(order.id);
+      }
+    });
+
+    DOM.queueTableBody.appendChild(row);
   });
 }
 
@@ -238,7 +376,7 @@ function renderOrderWorkbench() {
   const order = AppState.orders.find(o => o.id === AppState.selectedOrderId);
   if (!order) return;
 
-  const riskData = NOVAEngine.calculateRiskScore(order);
+  const riskData = getOrderRisk(order);
 
   DOM.wbOrderId.textContent = order.id;
   DOM.wbCustomerName.textContent = order.customer.name;
@@ -253,54 +391,82 @@ function renderOrderWorkbench() {
   const riskBadgeClass = riskData.level === 'High' ? 'badge-danger' : (riskData.level === 'Medium' ? 'badge-warning' : 'badge-emerald');
   DOM.wbRiskLevel.className = `badge ${riskBadgeClass}`;
   DOM.wbRiskLevel.textContent = `${riskData.level} Risk`;
+  DOM.wbRiskLevel.setAttribute('aria-label', `Engine risk level ${riskData.level}, score ${riskData.score} out of 100`);
   DOM.wbRiskScore.textContent = `${riskData.score}/100`;
 
   DOM.wbFailureDesc.textContent = order.failureDescription;
 
-  // Render Basket Items Table
-  DOM.wbItemsList.innerHTML = order.items.map(item => {
+  DOM.wbItemsList.textContent = '';
+  order.items.forEach((item) => {
     const confColor = item.inventoryConfidence < 25 ? 'var(--rose)' : (item.inventoryConfidence < 50 ? 'var(--amber)' : 'var(--emerald)');
-    const stockBadge = item.inStock 
-      ? `<span class="badge badge-emerald">Verified Stock</span>` 
-      : `<span class="badge badge-danger">Unconfirmed Stock</span>`;
+    const stockLabel = item.inStock ? 'Verified Stock' : 'Unconfirmed Stock';
+    const stockClass = item.inStock ? 'badge-emerald' : 'badge-danger';
 
-    return `
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0; border-bottom: 1px solid var(--border-color);">
-        <div>
-          <div style="font-weight: 600; color: var(--text-main);">${item.name} (x${item.qty})</div>
-          <div style="font-size: 0.775rem; color: var(--text-sub);">Unit Price: ₹${item.unitPrice}</div>
-        </div>
-        <div style="text-align: right;">
-          <div>${stockBadge}</div>
-          <div style="font-size: 0.75rem; font-weight: 700; color: ${confColor}; margin-top: 0.2rem;">
-            ${item.inventoryConfidence}% Confidence
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+    const row = createEl('div', {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0.65rem 0',
+        borderBottom: '1px solid var(--border-color)'
+      }
+    });
+
+    const left = createEl('div');
+    left.appendChild(createEl('div', { style: { fontWeight: '600', color: 'var(--text-main)' }, textContent: `${item.name} (x${item.qty})` }));
+    left.appendChild(createEl('div', { style: { fontSize: '0.775rem', color: 'var(--text-sub)' }, textContent: `Unit Price: ₹${item.unitPrice}` }));
+
+    const right = createEl('div', { style: { textAlign: 'right' } });
+    right.appendChild(createEl('div', null, createEl('span', {
+      className: `badge ${stockClass}`,
+      textContent: stockLabel,
+      'aria-label': `${item.name} ${stockLabel.toLowerCase()}`
+    })));
+    right.appendChild(createEl('div', {
+      style: { fontSize: '0.75rem', fontWeight: '700', color: confColor, marginTop: '0.2rem' },
+      textContent: `${item.inventoryConfidence}% Confidence`
+    }));
+
+    row.appendChild(left);
+    row.appendChild(right);
+    DOM.wbItemsList.appendChild(row);
+  });
 
   // If order is already Rescued, disable Analyze or show Rescued Notice
   if (order.status === 'Rescued') {
     DOM.btnAnalyze.disabled = true;
     DOM.btnAnalyze.textContent = 'Order Already Rescued';
-    
-    DOM.recCardContainer.innerHTML = `
-      <div class="alert-callout emerald" style="margin-top: 1rem;">
-        <div><strong>Order ${order.id} is Rescued!</strong></div>
-        <div style="margin-top: 0.2rem; font-size: 0.85rem;">Fulfillment decision executed cleanly. Dashboard metrics updated live.</div>
-      </div>
-    `;
+    DOM.btnAnalyze.setAttribute('aria-disabled', 'true');
+
+    const rescuedNotice = createEl('div', { className: 'alert-callout emerald', style: { marginTop: '1rem' }, role: 'status' });
+    rescuedNotice.appendChild(createEl('div', { textContent: `Order ${order.id} is Rescued!` }));
+    rescuedNotice.appendChild(createEl('div', {
+      style: { marginTop: '0.2rem', fontSize: '0.85rem' },
+      textContent: 'Fulfillment decision executed cleanly. Dashboard metrics updated live.'
+    }));
+    DOM.recCardContainer.textContent = '';
+    DOM.recCardContainer.appendChild(rescuedNotice);
   } else {
     DOM.btnAnalyze.disabled = false;
     DOM.btnAnalyze.textContent = '⚡ Analyze & Rescue Order';
+    DOM.btnAnalyze.setAttribute('aria-disabled', 'false');
     
     if (!AppState.currentRecommendation) {
-      DOM.recCardContainer.innerHTML = `
-        <div style="text-align: center; color: var(--text-muted); padding: 2rem; border: 1px dashed var(--border-color); border-radius: var(--radius-md); margin-top: 1rem;">
-          Click <strong>"⚡ Analyze & Rescue Order"</strong> to run the deterministic decision engine and evaluate optimal recovery options.
-        </div>
-      `;
+      const placeholder = createEl('div', {
+        style: {
+          textAlign: 'center',
+          color: 'var(--text-muted)',
+          padding: '2rem',
+          border: '1px dashed var(--border-color)',
+          borderRadius: 'var(--radius-md)',
+          marginTop: '1rem'
+        }
+      });
+      placeholder.appendChild(document.createTextNode('Click '));
+      placeholder.appendChild(createEl('strong', { textContent: '"⚡ Analyze & Rescue Order"' }));
+      placeholder.appendChild(document.createTextNode(' to run the deterministic decision engine and evaluate optimal recovery options.'));
+      DOM.recCardContainer.textContent = '';
+      DOM.recCardContainer.appendChild(placeholder);
     } else {
       renderRecommendationCard(AppState.currentRecommendation, order);
     }
@@ -321,87 +487,83 @@ function handleAnalyzeAndRescue() {
 
 // Render Engine Output Recommendation Card
 function renderRecommendationCard(rec, order) {
-  const altDetailsHtml = rec.alternativeDetails ? `
-    <div style="background: var(--bg-dark); padding: 0.85rem; border-radius: var(--radius-sm); margin-bottom: 1rem; border: 1px solid var(--border-color);">
-      <div style="font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; font-weight: 700; margin-bottom: 0.4rem;">Alternative Option Details</div>
-      ${Object.entries(rec.alternativeDetails).map(([key, val]) => `
-        <div style="display: flex; justify-content: space-between; font-size: 0.825rem; margin-bottom: 0.2rem;">
-          <span style="color: var(--text-sub); text-transform: capitalize;">${key.replace(/([A-Z])/g, ' $1')}:</span>
-          <span style="color: var(--text-main); font-weight: 600;">${val}</span>
-        </div>
-      `).join('')}
-    </div>
-  ` : '';
+  const card = createEl('div', { className: 'recommendation-card', role: 'region', 'aria-label': 'Rescue recommendation' });
 
-  DOM.recCardContainer.innerHTML = `
-    <div class="recommendation-card">
-      <div class="rec-header">
-        <div>
-          <span class="badge ${rec.badgeClass}">${rec.actionBadge}</span>
-          <h3 class="rec-title" style="margin-top: 0.4rem;">${rec.actionTitle}</h3>
-        </div>
-      </div>
+  const header = createEl('div', { className: 'rec-header' });
+  const headerInner = createEl('div');
+  headerInner.appendChild(createEl('span', { className: `badge ${rec.badgeClass}`, textContent: rec.actionBadge }));
+  headerInner.appendChild(createEl('h3', { className: 'rec-title', style: { marginTop: '0.4rem' }, textContent: rec.actionTitle }));
+  header.appendChild(headerInner);
+  card.appendChild(header);
 
-      <div class="rec-reason">
-        <strong>Deterministic Logic Rationale:</strong><br>
-        ${rec.reason}
-      </div>
+  const reason = createEl('div', { className: 'rec-reason' });
+  reason.appendChild(createEl('strong', { textContent: 'Deterministic Logic Rationale:' }));
+  reason.appendChild(document.createElement('br'));
+  reason.appendChild(document.createTextNode(rec.reason));
+  card.appendChild(reason);
 
-      ${altDetailsHtml}
-
-      <div class="impact-grid">
-        <div class="impact-box">
-          <div class="impact-box-label">ETA Impact</div>
-          <div class="impact-box-val">${rec.etaImpact}</div>
-        </div>
-        <div class="impact-box">
-          <div class="impact-box-label">Customer Retention</div>
-          <div class="impact-box-val">${rec.customerImpact}</div>
-        </div>
-        <div class="impact-box">
-          <div class="impact-box-label">Business Value</div>
-          <div class="impact-box-val">${rec.businessImpact}</div>
-        </div>
-      </div>
-
-      <div style="margin-top: 1.25rem;">
-        <button id="btn-apply-rescue" class="btn-action emerald" style="width: 100%;">
-          ✓ Apply Rescue Action (${order.id})
-        </button>
-      </div>
-    </div>
-  `;
-
-  // Attach listener to Apply Rescue button
-  const btnApply = document.getElementById('btn-apply-rescue');
-  if (btnApply) {
-    btnApply.addEventListener('click', () => handleApplyRescue(order, rec));
+  if (rec.alternativeDetails) {
+    const altBox = createEl('div', {
+      style: {
+        background: 'var(--bg-dark)',
+        padding: '0.85rem',
+        borderRadius: 'var(--radius-sm)',
+        marginBottom: '1rem',
+        border: '1px solid var(--border-color)'
+      }
+    });
+    altBox.appendChild(createEl('div', {
+      style: { fontSize: '0.75rem', color: 'var(--text-sub)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '0.4rem' },
+      textContent: 'Alternative Option Details'
+    }));
+    Object.keys(rec.alternativeDetails).forEach((key) => {
+      const label = key.replace(/([A-Z])/g, ' $1');
+      const row = createEl('div', {
+        style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', marginBottom: '0.2rem' }
+      });
+      row.appendChild(createEl('span', { style: { color: 'var(--text-sub)', textTransform: 'capitalize' }, textContent: `${label}:` }));
+      row.appendChild(createEl('span', { style: { color: 'var(--text-main)', fontWeight: '600' }, textContent: String(rec.alternativeDetails[key]) }));
+      altBox.appendChild(row);
+    });
+    card.appendChild(altBox);
   }
+
+  const impactGrid = createEl('div', { className: 'impact-grid' });
+  [
+    ['ETA Impact', rec.etaImpact],
+    ['Customer Retention', rec.customerImpact],
+    ['Business Value', rec.businessImpact]
+  ].forEach(([label, value]) => {
+    const box = createEl('div', { className: 'impact-box' });
+    box.appendChild(createEl('div', { className: 'impact-box-label', textContent: label }));
+    box.appendChild(createEl('div', { className: 'impact-box-val', textContent: value }));
+    impactGrid.appendChild(box);
+  });
+  card.appendChild(impactGrid);
+
+  const actionWrap = createEl('div', { style: { marginTop: '1.25rem' } });
+  const btnApply = createEl('button', {
+    id: 'btn-apply-rescue',
+    className: 'btn-action emerald',
+    type: 'button',
+    style: { width: '100%' },
+    textContent: `✓ Apply Rescue Action (${order.id})`,
+    'aria-label': `Apply rescue action for order ${order.id}`
+  });
+  btnApply.addEventListener('click', () => handleApplyRescue(order, rec));
+  actionWrap.appendChild(btnApply);
+  card.appendChild(actionWrap);
+
+  DOM.recCardContainer.textContent = '';
+  DOM.recCardContainer.appendChild(card);
 }
 
 // Handle "Apply Rescue"
 function handleApplyRescue(order, rec) {
-  // 1. Update Order Status
-  order.status = 'Rescued';
+  if (!applyRescueAction(order, rec)) return;
 
-  // 2. Increment Session Metrics
-  AppState.sessionRescuedCount += 1;
-  AppState.sessionPreservedRevenue += order.orderValue;
-
-  // 3. Add to Audit Feed
-  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  AppState.auditLog.unshift({
-    id: order.id,
-    actionTitle: rec.actionTitle,
-    orderValue: order.orderValue,
-    customerName: order.customer.name,
-    timestamp
-  });
-
-  // 4. Show Toast Notification
   showToast(`Order ${order.id} Rescued! ₹${order.orderValue} order value preserved.`);
 
-  // 5. Re-render UI
   AppState.currentRecommendation = null;
   renderAll();
 }
@@ -412,18 +574,16 @@ function renderImpactCalculator() {
   const ratePct = AppState.hypotheticalRescueRate;
   DOM.sliderValDisplay.textContent = `${ratePct}% Rescue Target`;
 
-  // Case Facts
-  const monthlyOrders = NOVACartData.metrics.monthlyOrders; // 38,500
-  const cancelRate = NOVACartData.metrics.cancellationRate; // 11%
-  const unavailShare = NOVACartData.metrics.unavailabilityCancellationShare; // 35%
-  const aov = NOVACartData.metrics.averageOrderValue; // ₹486
+  const scenario = computeImpactScenario(ratePct, NOVACartData.metrics);
+  const rescuedOrdersMonthly = scenario.rescuedOrdersMonthly;
+  const monthlyValuePreserved = scenario.monthlyValuePreserved;
+  const annualValuePreserved = scenario.annualValuePreserved;
 
-  // Calculations
-  const totalAvailabilityCancellations = Math.round(monthlyOrders * cancelRate * unavailShare); // ~1,482 orders/mo
-  const rescuedOrdersMonthly = Math.round(totalAvailabilityCancellations * (ratePct / 100)); // at 30% = 445 orders/mo
-  const monthlyValuePreserved = Math.round(rescuedOrdersMonthly * aov); // at 30% = ₹2,16,270 (~₹2.16 Lakh)
-  const annualValuePreserved = monthlyValuePreserved * 12; // ~₹25.95 Lakh / yr
-
+  if (DOM.rescueSlider) {
+    DOM.rescueSlider.setAttribute('aria-valuenow', String(ratePct));
+    DOM.rescueSlider.setAttribute('aria-valuetext', `${ratePct} percent rescue target`);
+  }
+  if (DOM.calcRescueEffLabel) DOM.calcRescueEffLabel.textContent = ratePct === 30 ? '30% Default Target' : `${ratePct}% Target`;
   if (DOM.calcRescuedOrders) DOM.calcRescuedOrders.textContent = `${rescuedOrdersMonthly.toLocaleString('en-IN')} Orders / Mo`;
   if (DOM.calcMonthlyRevenue) DOM.calcMonthlyRevenue.textContent = `₹${(monthlyValuePreserved / 100000).toFixed(2)} Lakh / Mo (₹${monthlyValuePreserved.toLocaleString('en-IN')})`;
   if (DOM.calcAnnualRevenue) DOM.calcAnnualRevenue.textContent = `₹${(annualValuePreserved / 100000).toFixed(2)} Lakh / Year`;
@@ -433,39 +593,56 @@ function renderImpactCalculator() {
 function renderAuditFeed() {
   if (!DOM.auditFeedList) return;
 
+  DOM.auditFeedList.textContent = '';
+
   if (AppState.auditLog.length === 0) {
-    DOM.auditFeedList.innerHTML = `
-      <div style="color: var(--text-muted); font-size: 0.85rem; padding: 1rem; text-align: center;">
-        No rescue actions applied yet in this session.
-      </div>
-    `;
+    DOM.auditFeedList.appendChild(createEl('div', {
+      style: { color: 'var(--text-muted)', fontSize: '0.85rem', padding: '1rem', textAlign: 'center' },
+      textContent: 'No rescue actions applied yet in this session.'
+    }));
     return;
   }
 
-  DOM.auditFeedList.innerHTML = AppState.auditLog.map(item => `
-    <div style="padding: 0.65rem 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
-      <div>
-        <span style="font-weight: 700; color: var(--emerald);">${item.id}</span> — 
-        <span style="color: var(--text-main); font-weight: 600;">${item.actionTitle}</span>
-        <div style="font-size: 0.75rem; color: var(--text-sub);">${item.customerName}</div>
-      </div>
-      <div style="text-align: right;">
-        <div style="font-weight: 700; color: var(--emerald);">+₹${item.orderValue}</div>
-        <div style="font-size: 0.7rem; color: var(--text-muted);">${item.timestamp}</div>
-      </div>
-    </div>
-  `).join('');
+  AppState.auditLog.forEach((item) => {
+    const row = createEl('div', {
+      style: {
+        padding: '0.65rem 0',
+        borderBottom: '1px solid var(--border-color)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        fontSize: '0.85rem'
+      }
+    });
+
+    const left = createEl('div');
+    const titleLine = createEl('div');
+    titleLine.appendChild(createEl('span', { style: { fontWeight: '700', color: 'var(--emerald)' }, textContent: item.id }));
+    titleLine.appendChild(document.createTextNode(' — '));
+    titleLine.appendChild(createEl('span', { style: { color: 'var(--text-main)', fontWeight: '600' }, textContent: item.actionTitle }));
+    left.appendChild(titleLine);
+    left.appendChild(createEl('div', { style: { fontSize: '0.75rem', color: 'var(--text-sub)' }, textContent: item.customerName }));
+
+    const right = createEl('div', { style: { textAlign: 'right' } });
+    right.appendChild(createEl('div', { style: { fontWeight: '700', color: 'var(--emerald)' }, textContent: `+₹${item.orderValue}` }));
+    right.appendChild(createEl('div', { style: { fontSize: '0.7rem', color: 'var(--text-muted)' }, textContent: item.timestamp }));
+
+    row.appendChild(left);
+    row.appendChild(right);
+    DOM.auditFeedList.appendChild(row);
+  });
 }
 
 // Show Toast Notification
 function showToast(message) {
   if (!DOM.toastContainer) return;
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.innerHTML = `
-    <span style="color: var(--emerald); font-size: 1.1rem;">✓</span>
-    <span>${message}</span>
-  `;
+  const toast = createEl('div', { className: 'toast', role: 'status' });
+  toast.appendChild(createEl('span', {
+    style: { color: 'var(--emerald)', fontSize: '1.1rem' },
+    'aria-hidden': 'true',
+    textContent: '✓'
+  }));
+  toast.appendChild(createEl('span', { textContent: message }));
 
   DOM.toastContainer.appendChild(toast);
 
@@ -477,13 +654,24 @@ function showToast(message) {
   }, 4000);
 }
 
+var NOVAApp = {
+  AppState,
+  getOrderRisk,
+  filterOrders,
+  computeImpactScenario,
+  applyRescueAction,
+  resetDemoState,
+  initApp
+};
+globalRoot.NOVAApp = NOVAApp;
+
 // Initialization Hook
-if (document.getElementById('queue-table-body')) {
-  initApp();
-} else if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
-} else {
-  initApp();
+if (typeof document !== 'undefined') {
+  if (document.getElementById('queue-table-body')) {
+    initApp();
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+  } else {
+    initApp();
+  }
 }
-
-

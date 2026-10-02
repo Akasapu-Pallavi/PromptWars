@@ -76,5 +76,35 @@ PromptWars/
 │   ├── data.js         # NOVA CART metrics, partner stores, demo orders, substitute catalog
 │   ├── engine.js       # Deterministic Decision Engine (risk scoring & recommendation generator)
 │   └── app.js          # SPA application controller, state, event listeners, live math
+├── tests/
+│   ├── qa_test.js      # Dependency-free Node QA suite (PASS/FAIL)
+│   └── README.md       # How to run tests
 └── README.md           # Documentation
 ```
+
+---
+
+## Testing & QA
+
+Lightweight, zero-dependency QA for the existing NOVA RESCUE engine, queue, rescue actions, and impact math. Tests load the same `js/data.js`, `js/engine.js`, and `js/app.js` files used by the browser app.
+
+**Test command** (from the project root):
+
+```bash
+node tests/qa_test.js
+```
+
+**Result:** 29 tests, 29 PASS / 0 FAIL.
+
+Coverage includes decision-engine action types, risk scoring, nearby-store re-route, product substitution, ETA adjustment, high-risk manual override, Apply Rescue (status change, rescued counter, preserved revenue, audit log), business-impact and rescue-rate slider math, search, risk filters, and status filters.
+
+**Accessibility checks**
+- Semantic landmarks (`header`, `nav`, `main`), heading hierarchy (`h1` → `h2` → `h3`), skip link, labeled search and rescue-rate slider.
+- Keyboard access for tabs, filters, Analyze/Apply actions, queue rows (Enter/Space), and visible `:focus-visible` outlines.
+- Table caption and `scope="col"` headers; `aria-live` on rescue toasts, recommendation output, and session KPIs; accessible risk/status labels.
+
+**Security checks**
+- Dynamic UI updates use `textContent` / DOM nodes instead of `innerHTML` string interpolation.
+- No API keys, credentials, or external request construction from user input.
+- Demo dataset phones remain masked; search/filter input is treated as text for matching only.
+- Apply Rescue cannot re-apply an already-rescued order.

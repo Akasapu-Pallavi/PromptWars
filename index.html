@@ -12,6 +12,8 @@
 </head>
 <body>
 
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
   <!-- Top Header & Brand Bar -->
   <header class="header-bar">
     <div class="brand-wrapper">
@@ -28,28 +30,28 @@
   </header>
 
   <!-- Navigation Tabs -->
-  <nav class="nav-tabs" aria-label="Main Navigation">
-    <button class="tab-btn active" data-tab="command-center">
+  <nav class="nav-tabs" aria-label="Main navigation">
+    <button type="button" class="tab-btn active" data-tab="command-center" aria-current="page" aria-controls="tab-command-center">
       📊 Command Center
     </button>
-    <button class="tab-btn" data-tab="rescue-workbench">
+    <button type="button" class="tab-btn" data-tab="rescue-workbench" aria-current="false" aria-controls="tab-rescue-workbench">
       🚨 Rescue Queue & Workbench <span class="tab-badge" id="queue-badge">8 At Risk</span>
     </button>
-    <button class="tab-btn" data-tab="business-impact">
+    <button type="button" class="tab-btn" data-tab="business-impact" aria-current="false" aria-controls="tab-business-impact">
       📈 Business Impact Calculator
     </button>
-    <button class="tab-btn" data-tab="evidence-insights">
+    <button type="button" class="tab-btn" data-tab="evidence-insights" aria-current="false" aria-controls="tab-evidence-insights">
       🔍 Evidence & Case Insights
     </button>
   </nav>
 
   <!-- Main Application Container -->
-  <main class="main-container">
+  <main id="main-content" class="main-container" tabindex="-1">
 
     <!-- TAB 1: COMMAND CENTER -->
-    <section id="tab-command-center" class="tab-content active">
+    <section id="tab-command-center" class="tab-content active" aria-labelledby="heading-command-center">
       <!-- Product Purpose Callout Banner -->
-      <div class="alert-callout info">
+      <div class="alert-callout info" role="note">
         <div>💡 <strong>Core Operations Principle:</strong></div>
         <div>NOVA RESCUE is not merely an inventory dashboard. Its purpose is to <em>prevent avoidable cancellations by turning inventory uncertainty into an actionable rescue decision</em>.</div>
       </div>
@@ -84,25 +86,25 @@
       <!-- Live Session Rescue Performance Bar -->
       <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #121826, #1a233a); border-color: var(--primary);">
         <div class="card-header">
-          <div class="card-title">
+          <h2 class="card-title" id="heading-command-center">
             <span style="color: var(--emerald);">⚡ Live Session Rescued Performance</span>
-          </div>
+          </h2>
           <span class="badge badge-emerald">Real-time Engine Active</span>
         </div>
         <div class="grid-cols-4">
           <div>
-            <div class="metric-label">Active At-Risk Queue</div>
-            <div class="metric-value" id="metric-active-at-risk" style="color: var(--rose);">8</div>
+            <div class="metric-label" id="label-active-at-risk">Active At-Risk Queue</div>
+            <div class="metric-value" id="metric-active-at-risk" style="color: var(--rose);" aria-labelledby="label-active-at-risk">8</div>
             <div class="metric-sub">Pending Operations Decision</div>
           </div>
           <div>
-            <div class="metric-label">Session Rescued Orders</div>
-            <div class="metric-value" id="metric-rescued-count" style="color: var(--emerald);">0</div>
+            <div class="metric-label" id="label-rescued-count">Session Rescued Orders</div>
+            <div class="metric-value" id="metric-rescued-count" style="color: var(--emerald);" aria-labelledby="label-rescued-count" aria-live="polite">0</div>
             <div class="metric-sub">Orders converted from At Risk to Rescued</div>
           </div>
           <div>
-            <div class="metric-label">Preserved Order Value</div>
-            <div class="metric-value" id="metric-preserved-rev" style="color: var(--emerald);">₹0</div>
+            <div class="metric-label" id="label-preserved-rev">Preserved Order Value</div>
+            <div class="metric-value" id="metric-preserved-rev" style="color: var(--emerald);" aria-labelledby="label-preserved-rev" aria-live="polite">₹0</div>
             <div class="metric-sub">Direct order revenue saved</div>
           </div>
           <div>
@@ -118,7 +120,7 @@
         <!-- Core Challenge Context Card -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title">🏪 NOVA CART Ecosystem Bottlenecks</div>
+            <h2 class="card-title">🏪 NOVA CART Ecosystem Bottlenecks</h2>
           </div>
           <div style="font-size: 0.875rem; color: var(--text-sub);">
             <ul style="padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.65rem;">
@@ -133,10 +135,10 @@
         <!-- Session Audit Log Feed -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title">📋 Operations Rescue Activity Log</div>
+            <h2 class="card-title">📋 Operations Rescue Activity Log</h2>
             <span class="badge badge-info">Audit Stream</span>
           </div>
-          <div id="audit-feed-list" style="max-height: 200px; overflow-y: auto;">
+          <div id="audit-feed-list" style="max-height: 200px; overflow-y: auto;" aria-live="polite" aria-relevant="additions">
             <!-- Rendered by app.js -->
           </div>
         </div>
@@ -144,46 +146,48 @@
     </section>
 
     <!-- TAB 2: RESCUE QUEUE & WORKBENCH -->
-    <section id="tab-rescue-workbench" class="tab-content">
+    <section id="tab-rescue-workbench" class="tab-content" hidden aria-labelledby="heading-rescue-queue">
       <div class="grid-workbench">
 
         <!-- Left Pane: At-Risk Rescue Queue -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title">📥 At-Risk Order Queue</div>
+            <h2 class="card-title" id="heading-rescue-queue">📥 At-Risk Order Queue</h2>
             <span class="badge badge-danger">Requires Action</span>
           </div>
 
           <!-- Queue Search & Filters -->
           <div class="controls-bar">
-            <input type="text" id="search-input" class="search-input" placeholder="Search Order ID, Store, Customer...">
+            <label for="search-input" class="visually-hidden">Search orders by Order ID, store, or customer</label>
+            <input type="text" id="search-input" class="search-input" placeholder="Search Order ID, Store, Customer..." autocomplete="off">
             
-            <div class="filter-btn-group">
-              <button class="btn-filter active" data-risk="ALL">All Risk</button>
-              <button class="btn-filter" data-risk="High">High</button>
-              <button class="btn-filter" data-risk="Medium">Med</button>
-              <button class="btn-filter" data-risk="Low">Low</button>
+            <div class="filter-btn-group" role="group" aria-label="Filter by risk level">
+              <button type="button" class="btn-filter active" data-risk="ALL" aria-pressed="true">All Risk</button>
+              <button type="button" class="btn-filter" data-risk="High" aria-pressed="false">High</button>
+              <button type="button" class="btn-filter" data-risk="Medium" aria-pressed="false">Med</button>
+              <button type="button" class="btn-filter" data-risk="Low" aria-pressed="false">Low</button>
             </div>
 
-            <div class="filter-btn-group">
-              <button class="btn-filter active" data-status="ALL">All Status</button>
-              <button class="btn-filter" data-status="At Risk">At Risk</button>
-              <button class="btn-filter" data-status="Rescued">Rescued</button>
+            <div class="filter-btn-group" role="group" aria-label="Filter by order status">
+              <button type="button" class="btn-filter active" data-status="ALL" aria-pressed="true">All Status</button>
+              <button type="button" class="btn-filter" data-status="At Risk" aria-pressed="false">At Risk</button>
+              <button type="button" class="btn-filter" data-status="Rescued" aria-pressed="false">Rescued</button>
             </div>
           </div>
 
           <!-- Queue Table -->
           <div class="table-container">
             <table>
+              <caption class="visually-hidden">At-risk order queue with customer, store, stock confidence, value, risk, and status</caption>
               <thead>
                 <tr>
-                  <th>Order ID</th>
-                  <th>Customer</th>
-                  <th>Store</th>
-                  <th>Stock Conf.</th>
-                  <th>Value</th>
-                  <th>Risk</th>
-                  <th>Status</th>
+                  <th scope="col">Order ID</th>
+                  <th scope="col">Customer</th>
+                  <th scope="col">Store</th>
+                  <th scope="col">Stock Conf.</th>
+                  <th scope="col">Value</th>
+                  <th scope="col">Risk</th>
+                  <th scope="col">Status</th>
                 </tr>
               </thead>
               <tbody id="queue-table-body">
@@ -198,10 +202,10 @@
           <!-- Selected Order Summary Card -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">
+              <h2 class="card-title">
                 🔍 Order Detail Workbench: <span id="wb-order-id" style="color: var(--primary);">ORD-8821</span>
-              </div>
-              <div id="wb-risk-level" class="badge badge-danger">High Risk</div>
+              </h2>
+              <div id="wb-risk-level" class="badge" aria-label="Risk level will be calculated">Calculating Risk</div>
             </div>
 
             <!-- Customer & Store Metadata -->
@@ -240,7 +244,7 @@
             <!-- Risk Failure Reason Callout -->
             <div class="alert-callout amber" style="margin-bottom: 1rem;">
               <div>⚠️ <strong>Primary Risk Signal:</strong> <span id="wb-failure-desc">Primary item "Organic Whole Milk 1L" is out of stock (18% confidence).</span></div>
-              <div style="font-size: 0.775rem; margin-top: 0.2rem;">Risk Score: <strong id="wb-risk-score">85/100</strong></div>
+              <div style="font-size: 0.775rem; margin-top: 0.2rem;">Risk Score: <strong id="wb-risk-score">Calculating</strong></div>
             </div>
 
             <!-- Itemized Basket Breakdown -->
@@ -252,13 +256,13 @@
             </div>
 
             <!-- Analyze & Rescue Trigger Button -->
-            <button id="btn-analyze" class="btn-action" style="width: 100%;">
+            <button type="button" id="btn-analyze" class="btn-action" style="width: 100%;" aria-label="Analyze selected order and generate rescue recommendation">
               ⚡ Analyze & Rescue Order
             </button>
           </div>
 
           <!-- Dynamic Engine Recommendation Card Output Area -->
-          <div id="rec-card-container">
+          <div id="rec-card-container" aria-live="polite">
             <!-- Rendered by app.js upon clicking Analyze -->
           </div>
 
@@ -268,10 +272,10 @@
     </section>
 
     <!-- TAB 3: BUSINESS IMPACT CALCULATOR -->
-    <section id="tab-business-impact" class="tab-content">
+    <section id="tab-business-impact" class="tab-content" hidden aria-labelledby="heading-business-impact">
       <div class="card" style="margin-bottom: 1.5rem;">
         <div class="card-header">
-          <div class="card-title">📈 Business Impact & Scenario Calculator</div>
+          <h2 class="card-title" id="heading-business-impact">📈 Business Impact & Scenario Calculator</h2>
           <span class="badge badge-emerald">Interactive Financial Model</span>
         </div>
 
@@ -283,7 +287,7 @@
         <!-- Case Facts vs Scenario Estimates Comparison Grid -->
         <div class="grid-cols-2" style="margin-bottom: 1.5rem;">
           <div class="detail-box">
-            <h4 style="color: var(--primary); margin-bottom: 0.75rem;">1. Verified Case Facts (NOVA CART Baseline)</h4>
+            <h3 style="color: var(--primary); margin-bottom: 0.75rem;">1. Verified Case Facts (NOVA CART Baseline)</h3>
             <div class="detail-row"><span class="detail-key">Monthly Orders:</span><span class="detail-val">38,500 orders</span></div>
             <div class="detail-row"><span class="detail-key">Baseline Cancellation Rate:</span><span class="detail-val">11% (4,235 orders)</span></div>
             <div class="detail-row"><span class="detail-key">Unavailability Cancellation Share:</span><span class="detail-val">35% of total cancellations</span></div>
@@ -293,7 +297,7 @@
           </div>
 
           <div class="detail-box">
-            <h4 style="color: var(--emerald); margin-bottom: 0.75rem;">2. Scenario Calculations (Target Rescue Engine)</h4>
+            <h3 style="color: var(--emerald); margin-bottom: 0.75rem;">2. Scenario Calculations (Target Rescue Engine)</h3>
             <div class="detail-row"><span class="detail-key">Total Availability Risk Pool:</span><span class="detail-val">1,482 orders / mo</span></div>
             <div class="detail-row"><span class="detail-key">Target Rescue Efficiency:</span><span class="detail-val" id="calc-rescue-eff-label">30% Default Target</span></div>
             <div class="detail-row"><span class="detail-key">Monthly Rescued Orders:</span><span class="detail-val" id="calc-rescued-orders" style="color: var(--emerald); font-size: 1.1rem; font-weight: 800;">445 Orders / Mo</span></div>
@@ -305,10 +309,10 @@
         <!-- Interactive Rescue Rate Slider -->
         <div class="slider-container">
           <div class="slider-header">
-            <span class="slider-title">Configure Target Hypothetical Rescue Rate (%)</span>
+            <label class="slider-title" for="rescue-slider">Configure Target Hypothetical Rescue Rate (%)</label>
             <span class="slider-value-display" id="slider-val-display">30% Rescue Target</span>
           </div>
-          <input type="range" id="rescue-slider" min="5" max="90" step="5" value="30">
+          <input type="range" id="rescue-slider" min="5" max="90" step="5" value="30" aria-valuemin="5" aria-valuemax="90" aria-valuenow="30" aria-valuetext="30 percent rescue target" aria-describedby="slider-val-display">
           <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
             <span>5% (Conservative)</span>
             <span>30% (Default Rescue Rate)</span>
@@ -326,10 +330,10 @@
     </section>
 
     <!-- TAB 4: EVIDENCE & WHY NOVA RESCUE -->
-    <section id="tab-evidence-insights" class="tab-content">
+    <section id="tab-evidence-insights" class="tab-content" hidden aria-labelledby="heading-evidence">
       <div class="card">
         <div class="card-header">
-          <div class="card-title">🔍 Evidence Chain: Why NOVA RESCUE Works</div>
+          <h2 class="card-title" id="heading-evidence">🔍 Evidence Chain: Why NOVA RESCUE Works</h2>
           <span class="badge badge-primary">Case Facts Synthesis</span>
         </div>
 
@@ -390,7 +394,7 @@
   </main>
 
   <!-- Global Toast Notification Container -->
-  <div id="toast-container" class="toast-container"></div>
+  <div id="toast-container" class="toast-container" aria-live="assertive" aria-atomic="true" role="status"></div>
 
   <!-- JavaScript Modules -->
   <script src="js/data.js"></script>
